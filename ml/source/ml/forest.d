@@ -300,24 +300,22 @@ class DepthLimit : StopRule
 	private uint _limit;
 }
 
-struct TreeParams
+struct TreeTrainingParams
 {
 	int candidatesPerNode;
+	ClassifierGenerator generator;
+	ClassifierSelector selector;
 	StopRule stopRule;
 }
 
 struct DecisionTreeTrainer
 {
 	uint _numClasses;
-	ClassifierGenerator _generator;
-	ClassifierSelector _selector;
-	TreeParams _params;
+	TreeTrainingParams _params;
 
-	this (uint numClasses, ClassifierGenerator generator, ClassifierSelector selector, TreeParams params)
+	this (uint numClasses, TreeTrainingParams params)
 	{
 		_numClasses = numClasses;
-		_generator = generator;
-		_selector = selector;
 		_params = params;
 	}
 
@@ -330,8 +328,8 @@ struct DecisionTreeTrainer
 
 	void growTree(TreeNode node, DataView data, uint currentDepth)
 	{
-		auto candidates = _generator.generate(_params.candidatesPerNode);
-		auto selection  = _selector.select(candidates, data);
+		auto candidates = _params.generator.generate(_params.candidatesPerNode);
+		auto selection  = _params.selector.select(candidates, data);
 		
 		auto classifier = selection[0];
 		auto split 		= selection[1];
@@ -386,8 +384,9 @@ unittest
 		}
 	}
 
-	auto params  = TreeParams(1, new DepthLimit(2));
-	auto trainer = DecisionTreeTrainer(4, new Constant, new SelectFirst, params);
+	auto params  = TreeTrainingParams(1, new Constant, new SelectFirst, new DepthLimit(2));
+
+	auto trainer = DecisionTreeTrainer(4, params);
 	auto data    = DataView([[0.0], [1.0], [2.0], [3.0]], [0, 1, 2, 3]);
 
 	auto tree    = trainer.trainTree(data);
@@ -406,7 +405,7 @@ interface DecisionForest
 // TODO: weight results by frequency of classes in input
 class Forest : DecisionForest
 {
-	this(Tree[] trees)
+	this(DecisionTree[] trees)
 	{
 		_trees = trees;
 	}
@@ -433,30 +432,17 @@ class Forest : DecisionForest
 		return summed;
 	}
 
-	private Tree[] _trees;
+	private DecisionTree[] _trees;
 	private uint _numClasses;
 }
 
-DecisionForest trainForest()
+DecisionForest trainForest(DataView data, DecisionTreeTrainer trainer, uint numTrees)
 {
-	// train a load of trees in parallel and then combine
-	// results. subtlety: need the PNRGs given to each tree to be independent
-//	uint _numClasses;
-//	ClassifierGenerator _generator;
-//	ClassifierSelector _selector;
-//	TreeParams _params;
-//	
-//	this (uint numClasses, ClassifierGenerator generator, ClassifierSelector selector, TreeParams params)
-//	{
-//		_numClasses = numClasses;
-//		_generator = generator;
-//		_selector = selector;
-//		_params = params;
-//	}
-//	
-//	DecisionTree trainTree(DataView data)
-//
+	DecisionTree[] trees = new DecisionTree[numTrees];
 
-	return null;
+	for (int i = 0; i < numTrees; ++i)
+		trees[i] = trainer.trainTree(data);
+
+	return new Forest(trees);
 }
 
