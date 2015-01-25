@@ -23,11 +23,6 @@ Image!RGB readImage(string path)
 	}
 }
 
-// .ppm <- rgb
-// .pgm <- mono
-// .bmp <- L8 or BGR
-// .png <- mystery, but library I'm using means Y or RGB
-
 Image!L8 greyscale(V)(V image)
 	if (isView!V)
 {
@@ -56,26 +51,6 @@ L8 mono(C)(C color)
 {
 	return L8(cast(ubyte)((0.2125 * color.r) + (0.7154 * color.g) + (0.0721 * color.b)));
 }
-
-//void main() {
-//	// optional last argument defines conversion
-//	IFImage im = read_image("peruna.png");
-//	IFImage im2 = read_image("peruna.png", ColFmt.YA);
-//	IFImage im3 = read_image("peruna.png", ColFmt.RGB);
-//	
-//	write_image("peruna.tga", im.w, im.h, im.pixels);
-//	write_image("peruna.tga", im.w, im.h, im.pixels, ColFmt.RGBA);
-//	
-//	// get basic info without decoding
-//	long w, h, chans;
-//	read_image_info("peruna.png", w, h, chans);
-//	
-//	// there are also format specific functions
-//	PNG_Header hdr = read_png_header("peruna.png"); // get detailed info
-//	IFImage im4 = read_jpeg("porkkana.jpg");
-//	write_tga("porkkana.tga", im4.w, im4.h, im4.pixels);
-//}
-
 
 Image!RGB readPBM(string path)
 {
