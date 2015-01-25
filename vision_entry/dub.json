@@ -1,0 +1,14 @@
+{
+	"name": "vision_entry",
+	"description": "Computer vision application",
+	"copyright": "Copyright © 2015, philip",
+	"authors": ["philip"],
+	"targetPath": "bin/",
+	"dependencies": {
+		"ae-graphics": ">=0.0.3",
+		"unit-threaded": ">=0.4.3",
+		"imageformats": ">=3.0.3",
+		"ml": "~master",
+		"image": "~master"
+	}
+}

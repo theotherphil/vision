@@ -1,0 +1,10 @@
+{
+	"name": "image",
+	"description": "Image processing library",
+	"copyright": "Copyright © 2015, philip",
+	"authors": ["philip"],
+	"dependencies": {
+		"ae-graphics": ">=0.0.3",
+		"imageformats": ">=3.0.3"
+	}
+}
