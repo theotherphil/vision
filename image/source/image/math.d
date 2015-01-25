@@ -2,9 +2,7 @@
 
 import std.algorithm;
 
-/**
-	Cast with clipping instead of overflow
-*/
+///	Cast with clipping instead of overflow
 To clipTo(To, From)(From x)
 {
 	return cast(To)(max(To.min, min(To.max, x)));

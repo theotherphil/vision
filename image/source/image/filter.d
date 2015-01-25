@@ -45,7 +45,19 @@ auto horizontalFilter(V)(V view, double[] kernel, Padding padding = Padding.Cont
 			{
 				auto pix = buffer[x + z - k/2];
 
-				/// TODO: how do I replace this loop with a single operator?
+				/// TODO: 
+				/// 	Replace loop and double[] with
+				/// 	something like:
+				/// 
+				/// 	alias DPix = ChangeChannelType!(Pix, double);
+				/// 	
+				/// 	... intermediate calculations on DPix type
+				///     ... (note that p :: A + q :: B has type A)
+				/// 	
+				/// 	casting assign to blurred
+				/// 
+				/// 	This requires support for floating point
+				/// 	channels in ae.graphics.color
 				foreach (i, f; pix.tupleof)
 					acc[i] += f * kernel[z];
 			}
@@ -124,8 +136,6 @@ auto verticalSobel(V)(V view)
 {
 	return view.separableFilter(vSobelX, vSobelY);
 }
-
-// PHIL: approximation to Gaussian via multiple triangular filters
 
 /// Fills the left margin entries in buffer with leftVal and the right margin entries with rightVal
 private void padBuffer(Pix)(Pix[] buffer, size_t margin, Pix leftVal, Pix rightVal)

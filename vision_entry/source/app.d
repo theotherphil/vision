@@ -14,8 +14,9 @@ import ae.utils.graphics.view;
 
 import imageformats;
 
-import image.io;
+import image.contrast;
 import image.filter;
+import image.io;
 import image.viewrange;
 
 import ml.math;
@@ -96,17 +97,10 @@ string outDir = "/Users/philip/dev/temp/";
 void main()
 {
 	Image!RGB img = readImage(testImageDir ~ "00000.ppm");
-	auto edges = img.toGreyscale.sobel;
-	writeln(img.h);
-	edges.writePNG(devDir ~ "edges.png");
+	auto eq = img.toGreyscale.equaliseHistogram;
+	eq.writePNG(devDir ~ "eq2.png");
 
 }
-
-//What I want to do. Needs the FP fix on head
-//alias DPix = ChangeChannelType!(RGB, double);
-//auto p = RGB(1, 2, 3);
-//auto q = DPix(5, 6, 7);
-//auto r = q + p;
 
 // profile classifier generator usage with arrays as outputs
 // vs range as ouputs and reusing a single stump allocation

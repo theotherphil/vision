@@ -18,11 +18,22 @@ struct ViewSource(V)
 	{
 		return r.empty;
 	}
-	
-	ViewColor!V front()
+
+	static if (isWritableView!V)
 	{
-		auto loc = r.front;
-		return v[loc[0], loc[1]];
+		ref ViewColor!V front()
+		{
+			auto loc = r.front;
+			return v[loc[0], loc[1]];
+		}
+	}
+	else
+	{
+		ViewColor!V front()
+		{
+			auto loc = r.front;
+			return v[loc[0], loc[1]];
+		}
 	}
 	
 	void popFront()
@@ -30,17 +41,21 @@ struct ViewSource(V)
 		r.popFront;
 	}
 
-	static if (isWritableView!V)
-	{
-		void put(ViewColor!V pix)
-		{
-			auto loc = r.front();
-			v[loc[0], loc[1]] = pix;
-		}
-	}
-
 	V v;
 	typeof(cartesianProduct(iota(V.init.w), iota(V.init.h))) r;
+}
+
+unittest
+{
+	import ae.utils.graphics.image;
+
+	auto image = Image!ubyte(1, 1);
+	image[0, 0] = 7;
+
+	foreach (ref pix; image.source)
+		pix = 19;
+
+	assert(image[0, 0] == 19);
 }
 
 auto source(V)(V view)
