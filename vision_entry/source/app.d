@@ -96,10 +96,12 @@ string outDir = "/Users/philip/dev/temp/";
 
 void main()
 {
-	Image!RGB img = readImage(testImageDir ~ "00000.ppm");
-	auto eq = img.toGreyscale.equaliseHistogram;
-	eq.writePNG(devDir ~ "eq2.png");
+	//Image!RGB img = readImage(testImageDir ~ "00000.ppm");
+	//auto eq = img.toGreyscale.equaliseHistogram;
+	//eq.writePNG(devDir ~ "eq2.png");
 
+	//glyph(75, 5, true, 4).toPNG.toFile(outDir ~ "glyphSigned.png");
+	//glyph(75, 5, false, 4).toPNG.toFile(outDir ~ "glyphUnsigned.png");
 }
 
 // profile classifier generator usage with arrays as outputs

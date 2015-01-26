@@ -62,6 +62,9 @@ auto horizontalFilter(V)(V view, double[] kernel, Padding padding = Padding.Cont
 					acc[i] += f * kernel[z];
 			}
 
+			foreach (ref d; acc)
+				d /= k;
+
 			auto pix = Pix.init;
 
 			foreach (i, ref f; pix.tupleof)
@@ -72,6 +75,31 @@ auto horizontalFilter(V)(V view, double[] kernel, Padding padding = Padding.Cont
 	}
 
 	return blurred;
+}
+
+unittest
+{
+	import image.viewrange;
+	import image.util;
+
+	auto c = procedural!((x, y) => L8(cast(ubyte)(x * y + x)))(10, 10);
+	auto id = [0.0, 3.0, 0.0];
+	assert(c.horizontalFilter(id).pixelsEqual(c));
+
+	auto d = 
+		[1, 4, 1,
+		 4, 7, 4,
+		 1, 4, 1].toL8(3, 3);
+
+	auto box = [1.0, 1.0, 1.0];
+
+	auto expected =
+		[2, 2, 2,
+		 5, 5, 5,
+		 2, 2, 2].toL8(3, 3);
+
+	auto result = d.horizontalFilter(box);
+	assert(d.horizontalFilter(box).pixelsEqual(expected));
 }
 
 ///	Returns: Vertical correlations between input view and 1d kernel
@@ -100,29 +128,6 @@ static double[3] hSobelY = [1, 2, 1];  /// Vertical filter to use for horizontal
 static double[3] vSobelX = [1, 2, 1];  /// Horizontal filter to use for vertical Sobel
 static double[3] vSobelY = [-1, 0, 1]; /// Vertical filter to use for vertical Sobel
 
-auto sobel(V)(V view)
-	if (isView!V  && is (ViewColor!V == L8))
-{
-	auto hSobel = horizontalSobel(view);
-	auto vSobel = verticalSobel(view);
-
-	auto sobel = Image!L8(view.w, view.h);
-
-	for (auto y = 0; y < view.h; ++y)
-	{
-		for (auto x = 0; x < view.w; ++x)
-		{
-			double h     = hSobel[x, y].l;
-			double v     = vSobel[x, y].l;
-			double grad  = sqrt(h * h + v * v);
-
-			sobel[x, y] = L8(clipTo!ubyte(grad));
-		}
-	}
-
-	return sobel;
-}
-
 /// TODO: for tiny filters do the 2d filter directly (at least for 3x3)
 auto horizontalSobel(V)(V view)
 	if (isView!V && is (ViewColor!V == L8))
@@ -137,6 +142,44 @@ auto verticalSobel(V)(V view)
 	return view.separableFilter(vSobelX, vSobelY);
 }
 
+unittest
+{
+	import std.algorithm;
+	import image.util;
+	import image.viewrange;
+
+	auto flat = solid(L8(1), 3, 3);
+	assert(flat.horizontalSobel.source.all!(x => x == L8(0)));
+	assert(flat.verticalSobel.source.all!(x => x == L8(0)));
+
+	auto grad = procedural!((x, y) => (3*x).toL8)(4, 4);
+	auto mid = grad.horizontalSobel.crop(1, 1, 3, 3);
+	assert(mid.source.all!(x => x == L8(2)));
+}
+
+auto sobel(V)(V view)
+	if (isView!V  && is (ViewColor!V == L8))
+{
+	auto hSobel = horizontalSobel(view);
+	auto vSobel = verticalSobel(view);
+	
+	auto sobel = Image!L8(view.w, view.h);
+	
+	for (auto y = 0; y < view.h; ++y)
+	{
+		for (auto x = 0; x < view.w; ++x)
+		{
+			double h     = hSobel[x, y].l;
+			double v     = vSobel[x, y].l;
+			double grad  = sqrt(h * h + v * v);
+			
+			sobel[x, y] = L8(clipTo!ubyte(grad));
+		}
+	}
+	
+	return sobel;
+}
+
 /// Fills the left margin entries in buffer with leftVal and the right margin entries with rightVal
 private void padBuffer(Pix)(Pix[] buffer, size_t margin, Pix leftVal, Pix rightVal)
 {
@@ -145,4 +188,19 @@ private void padBuffer(Pix)(Pix[] buffer, size_t margin, Pix leftVal, Pix rightV
 	
 	for (size_t idx = buffer.length - margin; idx < buffer.length; ++idx)
 		buffer[idx] = rightVal;
+}
+
+unittest
+{
+	auto a = [0, 1, 2, 3, 0];
+	padBuffer(a, 1, 4, 5);
+	assert(a == [4, 1, 2, 3, 5]);
+	padBuffer(a, 2, 8, 9);
+	assert(a == [8, 8, 2, 9, 9]);
+
+	auto b = [0, 1, 2, 0];
+	padBuffer(b, 1, 4, 5);
+	assert(b == [4, 1, 2, 5]);
+	padBuffer(b, 2, 8, 9);
+	assert(b == [8, 8, 9, 9]);
 }

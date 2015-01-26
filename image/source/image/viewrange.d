@@ -87,3 +87,9 @@ auto sink(V)(V view)
 {
 	return ViewSink!V(view);
 }
+
+bool pixelsEqual(V,W)(V v, W w)
+	if (isView!V && isView!W && is (ViewColor!V == ViewColor!W))
+{
+	return v.source.equal(w.source);
+}

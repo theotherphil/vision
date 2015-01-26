@@ -36,10 +36,9 @@ int[256] cumulativeHistogram(V)(V view)
 
 unittest
 {
-	L8 toL8(int x){ return L8(cast(ubyte)x); }
-	L8[] row = [1, 2, 3, 2, 1].map!toL8.array;
+	import image.util;
 
-	auto img = procedural!((x, y) => row[x])(5, 1);
+	auto img = [1, 2, 3, 2, 1].toL8(5, 1);
 	auto hist = img.cumulativeHistogram;
 
 	assert(hist[0 .. 4] == [0, 2, 4, 5]);
