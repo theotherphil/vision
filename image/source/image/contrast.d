@@ -7,7 +7,13 @@ import std.conv;
 import ae.utils.graphics.image;
 import ae.utils.graphics.color;
 
+import image.util;
+import image.math;
 import image.viewrange;
+
+enum is8BitGreyscale(V) = is (ViewColor!V == L8);
+
+static assert(is8BitGreyscale!(Image!L8));
 
 ///	Copies view into a newly allocated image and updates that in place
 Image!(ViewColor!V) copyAndThen(alias fun, V, T...)(V view, T args)
@@ -46,7 +52,7 @@ unittest
 }
 
 void equaliseHistogramMut(V)(V view)
-	if (isWritableView!V && is (ViewColor!V == L8))
+	if (isWritableView!V && is8BitGreyscale!V)
 {
 	auto hist    = cumulativeHistogram(view);
 	double total = hist[255];
@@ -59,9 +65,71 @@ void equaliseHistogramMut(V)(V view)
 }
 
 auto equaliseHistogram(V)(V view)
-	if (isView!V && is (ViewColor!V == L8))
+	if (isView!V && is8BitGreyscale!V)
 {
 	return copyAndThen!equaliseHistogramMut(view);
 }
 
-// TODO: constrast stretch, histogram match, adapative local histogram equalisation
+/// Linearly stretches image contrast between min and max percentiles
+/// Inclusive lower bound, exclusive upper
+auto stretchContrast(V)(V view, int minPercentile, int maxPercentile)
+	if (isView!V && is8BitGreyscale!V)
+{
+	assert(maxPercentile >= minPercentile, "maxPercentile must be >= minPercentile");
+
+	int[256] hist = cumulativeHistogram(view);
+
+	auto lowValue  = 255;
+	auto highValue = 255;
+
+	double count = hist[$ - 1];
+	for (int i = 0; i < 256; ++i)
+	{
+		auto per = 100.0 * hist[i]/count;
+		if (per <= minPercentile)
+			lowValue = i;
+		if (per < maxPercentile)
+			highValue = i;
+	}
+
+	return view.stretch(lowValue, highValue);
+}
+
+private L8 stretch(L8 pix, ubyte low, ubyte high)
+{
+	return stretch(pix.l, low, high).toL8;
+}
+
+private ubyte stretch(ubyte pix, ubyte low, ubyte high)
+{
+	return clipTo!ubyte(low + (high - low) * pix / 255.0);
+}
+
+unittest
+{
+	assert(stretch(26, 10, 110) == 20);
+	assert(stretch(L8(26), 10, 110) == L8(20));
+}
+
+/// Linearly stretch all pixel intensities to fit the 
+/// given range of intensities (not percentiles)
+auto stretch(V)(V view, int low, int high)
+	if (isWritableView!V)// && is8BitGreyscale!V)
+{
+	auto lo = cast(ubyte)low;
+	auto hi = cast(ubyte)high;
+
+	return view.colorMap!(p => stretch(p, lo, hi));
+}
+
+unittest
+{
+	import image.util;
+
+	auto img = [13, 26, 39, 52].toL8(2, 2);
+	auto str = img.stretch(10, 110);
+
+	assert(str.pixelsEqual([15, 20, 25, 30].toL8(2, 2)));
+}
+
+// TODO: histogram match, adapative local histogram equalisation

@@ -4,7 +4,7 @@ import std.array;
 import std.algorithm;
 
 import ae.utils.graphics.color;
-import ae.utils.graphics.view;
+import ae.utils.graphics.image;
 
 L8 toL8(int x)
 { 
@@ -13,7 +13,11 @@ L8 toL8(int x)
 
 auto toL8(int[] xs, int w, int h)
 {
-	return procedural!((x, y) => xs.map!toL8[y * w + x])(w, h);
+	auto img = Image!L8(w, h);
+	for (auto y = 0; y < h; ++y)
+		for (auto x = 0; x < w; ++x)
+			img[x, y] = xs[y * w + x].toL8;
+	return img;
 }
 
 
