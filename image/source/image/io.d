@@ -92,11 +92,19 @@ ubyte at(IFImage img, long x, long y, int c)
 void writePBM(V)(V view, string path)
 	if (isView!V)
 {
+	if (!path.endsWith(".ppm"))
+	{
+		path ~= ".ppm";
+	}
 	view.toPBM.toFile(path);
 }
 
 void writePNG(V)(V view, string path)
 {
+	if (!path.endsWith(".png"))
+	{
+		path ~= ".png";
+	}
 	view.toPNG.toFile(path);
 }
 

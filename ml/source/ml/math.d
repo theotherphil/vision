@@ -29,14 +29,6 @@ double entropy(T)(T labels, uint numClasses)
 	return entropy;
 }
 
-version(unittest)
-{
-	bool equalWithin(double x, double y, double eps)
-	{
-		return abs(x - y) < eps;
-	}
-}
-
 unittest
 {
 	assert(entropy([1, 1], 2u) == 0.0);

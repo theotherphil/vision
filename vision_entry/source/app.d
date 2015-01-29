@@ -16,6 +16,7 @@ import imageformats;
 import image.contrast;
 import image.filter;
 import image.io;
+import image.util;
 import image.viewrange;
 
 import ml.math;
@@ -35,6 +36,14 @@ string outDir = "/Users/philip/dev/temp/";
 
 void main()
 {
+	auto image = readPNG(outDir ~ "grey-tree.png").toGreyscale;
+	image.writePNG(outDir ~ "original");
+
+	static assert(is8BitGreyscale!(typeof(image)));
+
+	image.stretchContrast(10, 90).writePNG(outDir ~ "10_90");
+	image.stretchContrast(40, 60).writePNG(outDir ~ "40_60");
+
 	//glyph(75, 5, true, 4).toPNG.toFile(outDir ~ "glyphSigned.png");
 	//glyph(75, 5, false, 4).toPNG.toFile(outDir ~ "glyphUnsigned.png");
 }
