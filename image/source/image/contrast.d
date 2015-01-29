@@ -11,10 +11,6 @@ import image.util;
 import image.math;
 import image.viewrange;
 
-enum is8BitGreyscale(V) = is (ViewColor!V == L8);
-
-static assert(is8BitGreyscale!(Image!L8));
-
 ///	Copies view into a newly allocated image and updates that in place
 Image!(ViewColor!V) copyAndThen(alias fun, V, T...)(V view, T args)
 	if (isView!V)
@@ -102,19 +98,23 @@ private L8 stretch(L8 pix, ubyte low, ubyte high)
 
 private ubyte stretch(ubyte pix, ubyte low, ubyte high)
 {
-	return clipTo!ubyte(low + (high - low) * pix / 255.0);
+	return clipTo!ubyte((255.0 * (pix - low))/(high - low));
 }
 
 unittest
 {
-	assert(stretch(26, 10, 110) == 20);
-	assert(stretch(L8(26), 10, 110) == L8(20));
+	assert(stretch(0, 10, 100) == 0);
+	assert(stretch(110, 10, 100) == 255);
+	assert(stretch(10, 10, 100) == 0);
+	assert(stretch(100, 10, 100) == 255);
+	assert(stretch(13, 10, 100) == 8);
+	assert(stretch(L8(13), 10, 100) == L8(8));
 }
 
 /// Linearly stretch all pixel intensities to fit the 
 /// given range of intensities (not percentiles)
 auto stretch(V)(V view, int low, int high)
-	if (isWritableView!V)// && is8BitGreyscale!V)
+	if (isWritableView!V && is8BitGreyscale!V)
 {
 	auto lo = cast(ubyte)low;
 	auto hi = cast(ubyte)high;
@@ -126,10 +126,10 @@ unittest
 {
 	import image.util;
 
-	auto img = [13, 26, 39, 52].toL8(2, 2);
+	auto img = [11, 12, 13, 14].toL8(2, 2);
 	auto str = img.stretch(10, 110);
 
-	assert(str.pixelsEqual([15, 20, 25, 30].toL8(2, 2)));
+	assert(str.pixelsEqual([2, 5, 7, 10].toL8(2, 2)));
 }
 
 // TODO: histogram match, adapative local histogram equalisation
