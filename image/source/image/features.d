@@ -99,10 +99,14 @@ HistGrid histGrid(V)(V view, HogOptions options)
 		
 			double mag = sqrt(hVal^^2 + vVal^^2);
 			double dir = atan2(vVal, hVal);
-			
+
 			auto oInter = interpolateGradient(dir, orientations, options.signed);
 			auto hInter = interpolate!false(x, options.cellSide);
 			auto vInter = interpolate!false(y, options.cellSide);
+
+			import std.stdio;
+			writefln("hVal: %s, vVal: %s, mag: %s, dir: %s, inter: %s", 
+				hVal, vVal, mag, dir, oInter);
 
 			foreach (yBin; TypeTuple!(0, 1))
 				foreach (xBin; TypeTuple!(0, 1))
@@ -112,7 +116,7 @@ HistGrid histGrid(V)(V view, HogOptions options)
 					auto xc = hInter[xBin];
 					auto oc = oInter[oBin];
 					
-					if (within(view, xc, yc, oc))
+					if (within(grid, xc, yc))
 					{
 						auto w = vInter[yBin + 2] 
 						* hInter[xBin + 2] 
@@ -131,9 +135,9 @@ struct HistGrid
 {
 	this(int w, int h, int o)
 	{
-		w = w;
-		h = h;
-		o = o;
+		this.w = w;
+		this.h = h;
+		this.o = o;
 		_data = new double[w * h * o];
 		_data[] = 0.0;
 	}
@@ -144,7 +148,7 @@ struct HistGrid
 		return _data[start .. start + o];
 	}
 
-	double opIndex(int x, int y, int o)
+	ref double opIndex(int x, int y, int o)
 	{
 		return _data[cellStart(x, y) + o];
 	}
@@ -161,9 +165,9 @@ struct HistGrid
 	private double[] _data;
 }
 
-private bool within(V)(V view, int x, int y)
+private bool within(HistGrid grid, int x, int y)
 {
-	return x >= 0 && x < view.w && y >= 0 && y < view.h;
+	return x >= 0 && x < grid.w && y >= 0 && y < grid.h;
 }
 
 // Left index, right index, left weight
@@ -238,10 +242,22 @@ private void validate(V)(V view, HogOptions options)
 	assert((view.w - blockSide) % stride == 0, format(blockErr, "h", view.h));
 }
 
+// Utils for visualising HOG features
+
+import std.range;
+
+auto visualise(HistGrid grid, int side, bool signed, double scale)
+{
+	return iota(grid.h)
+			.map!(y => 
+				iota(grid.w)
+					.map!(x => star(side, grid.cell(x, y), signed, scale))
+					.hjoin)
+			.vjoin;
+}
+
 auto star(int side, double[] hist, bool signed, double scale)
 {
-	import std.range;
-
 	auto numBins = cast(int)hist.length;
 	auto rays = 
 		iota(numBins)
@@ -260,7 +276,8 @@ auto star(int side, double[] hist, bool signed, double scale)
 // intuitive
 private double dir(int index, int orientations, bool signed)
 {
-	return (signed ? 2 * PI : PI) * index / orientations;
+	double range = signed ? 2 * PI : PI;
+	return range * index / orientations;
 }
 
 /// theta is counter-clockwise rotation of line

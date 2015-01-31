@@ -132,14 +132,16 @@ static double[3] vSobelY = [-1, 0, 1]; /// Vertical filter to use for vertical S
 auto horizontalSobel(V)(V view)
 	if (isView!V && is (ViewColor!V == L8))
 {
-	return view.separableFilter(hSobelX, hSobelY);
+	auto sView = view.colorMap!(p => S16(p.l));
+	return sView.separableFilter(hSobelX, hSobelY);
 }
 
 /// ditto
 auto verticalSobel(V)(V view)
 	if (isView!V && is (ViewColor!V == L8))
 {
-	return view.separableFilter(vSobelX, vSobelY);
+	auto sView = view.colorMap!(p => S16(p.l));
+	return sView.separableFilter(vSobelX, vSobelY);
 }
 
 unittest
@@ -149,12 +151,12 @@ unittest
 	import image.viewrange;
 
 	auto flat = solid(L8(1), 3, 3);
-	assert(flat.horizontalSobel.source.all!(x => x == L8(0)));
-	assert(flat.verticalSobel.source.all!(x => x == L8(0)));
+	assert(flat.horizontalSobel.source.all!(x => x == S16(0)));
+	assert(flat.verticalSobel.source.all!(x => x == S16(0)));
 
 	auto grad = procedural!((x, y) => (3*x).toL8)(4, 4);
 	auto mid = grad.horizontalSobel.crop(1, 1, 3, 3);
-	assert(mid.source.all!(x => x == L8(2)));
+	assert(mid.source.all!(x => x == S16(2)));
 }
 
 auto sobel(V)(V view)

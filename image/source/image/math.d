@@ -16,6 +16,7 @@ unittest
 	assert(clipTo!uint(25) == 25, "25 :: int -> 25 :: uint");
 	assert(clipTo!uint(-25) == 0, "-25 :: int -> 0 :: uint");
 	assert(clipTo!ubyte(500) == 255, "500 :: int -> 255 :: ubyte");
+	assert(clipTo!ubyte(-1.0) == 0, "-1.0 :: double -> 0 :: ubyte");
 }
 
 double l2Norm(R)(R r)

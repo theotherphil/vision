@@ -6,13 +6,21 @@ import std.algorithm;
 import ae.utils.graphics.color;
 import ae.utils.graphics.image;
 
+import image.math;
+
 enum is8BitGreyscale(V) = is (ViewColor!V == L8);
 
 static assert(is8BitGreyscale!(Image!L8));
 
 L8 toL8(T)(T x)
 {
-	return L8(cast(ubyte)x); 
+	return L8(clipTo!ubyte(x));
+}
+
+unittest
+{
+	assert(500.0.toL8 == L8(255));
+	assert((-1.0).toL8 == L8(0));
 }
 
 auto toL8(int[] xs, int w, int h)
