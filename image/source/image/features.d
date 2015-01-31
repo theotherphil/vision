@@ -6,6 +6,7 @@ import std.typecons;
 import std.typetuple;
 
 import ae.utils.graphics.color;
+import ae.utils.graphics.draw;
 import ae.utils.graphics.image;
 
 import image.filter;
@@ -124,6 +125,16 @@ HistGrid histGrid(V)(V view, HogOptions options)
 	}
 
 	return grid;
+}
+
+/// theta is counter-clockwise rotation of line
+auto ray(int side, bool half, double theta)
+{
+	auto pad = cast(int)(0.05 * side);
+	auto mid = side / 2;
+	auto image = Image!L8(side, side);
+	line(image, mid, pad, mid, half ? mid : side - pad, L8(255));
+	return image.rotate(theta, L8(0), mid, mid);
 }
 
 struct HistGrid
