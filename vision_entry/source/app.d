@@ -1,7 +1,9 @@
 
 import std.csv;
 import std.conv;
+import std.datetime;
 import std.file;
+import std.math;
 import std.path;
 import std.range;
 import std.stdio;
@@ -11,42 +13,43 @@ import ae.utils.graphics.color;
 import ae.utils.graphics.image;
 import ae.utils.graphics.draw;
 
-import imageformats;
-
 import image.contrast;
+import image.features;
 import image.filter;
 import image.io;
 import image.util;
 import image.viewrange;
 
-import ml.math;
-import ml.forest;
+import gtsrb;
 
 string devDir = "/Users/philip/dev/";
-string testImageDir = "/Users/philip/dev/data/GTSRB/Final_Test/Images/";
 string outDir = "/Users/philip/dev/temp/";
 
-//RGB colour space with no gamma cor- rection ;
-//[−1, 0, 1] gradient filter with no smoothing ; 
-//linear gradient voting into 9 orientation bins in 0◦–180◦; 
-//16×16 pixel blocks of four 8×8 pixel cells; Gaussian spatial window with σ = 8 pixel;
-//L2-Hys (Lowe-style clipped L2 norm) block normalization; block spacing stride of 
-//	8 pixels (hence 4-fold coverage of each cell) ; 64×128 detection window ; 
-//linear SVM classifier.
+string temp(string file)
+{
+	return buildPath(outDir, file);
+}
 
 void main()
 {
-	auto image = readPNG(outDir ~ "grey-tree.png").toGreyscale;
-	image.writePNG(outDir ~ "original");
-
-	static assert(is8BitGreyscale!(typeof(image)));
-
-	image.stretchContrast(10, 90).writePNG(outDir ~ "10_90");
-	image.stretchContrast(40, 60).writePNG(outDir ~ "40_60");
-
-	//glyph(75, 5, true, 4).toPNG.toFile(outDir ~ "glyphSigned.png");
-	//glyph(75, 5, false, 4).toPNG.toFile(outDir ~ "glyphUnsigned.png");
+	auto dur = benchmark!runSigns(1);
+	writeln("Time taken: ", to!Duration(dur[0]));
 }
 
-// profile classifier generator usage with arrays as outputs
-// vs range as ouputs and reusing a single stump allocation
+void runSigns()
+{
+	score(new ConstantSignTrainer(0), 10);
+}
+
+void runHog()
+{
+	auto image = 
+		readPNG(outDir ~ "house.png")
+			.toGreyscale
+			.crop(0, 0, 500, 350);
+	
+	auto opts = HogOptions(8, true, 10, 2, 1);
+	
+	histGrid(image, opts).visualise(20, true, 350.0).writePNG(temp("hog"));
+	//star(150, [1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0], true, 1.0).writePNG(temp("star"));
+}

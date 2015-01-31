@@ -1,0 +1,10 @@
+{
+	"fileVersion": 1,
+	"versions": {
+		"ae-graphics": "0.0.3",
+		"imageformats": "3.0.4",
+		"unit-threaded": "0.4.3",
+		"ml": "~master",
+		"image": "~master"
+	}
+}
