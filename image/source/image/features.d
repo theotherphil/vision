@@ -3,11 +3,13 @@
 import std.math;
 import std.string;
 import std.typecons;
+import std.typetuple;
 
 import ae.utils.graphics.color;
 import ae.utils.graphics.image;
 
 import image.filter;
+import image.math;
 import image.util;
 
 /// 
@@ -39,6 +41,47 @@ double[] hog(V)(V view, HogOptions options)
 {
 	validate(view, options);
 
+	auto grid = histGrid(view, options);
+	auto side = options.blockSide;
+	auto step = options.blockStride;
+	auto bins = options.orientations;
+
+	auto xBlocks = (grid.w - side) / step;
+	auto yBlocks = (grid.h - side) / step;
+	auto chunkSize = bins * side ^^ 2;
+
+	double[] descriptor = new double[xBlocks * yBlocks * chunkSize];
+
+	for (auto y = 0; y + side <= grid.h; ++y)
+	{
+		for (auto x = 0; x + side <= grid.w; ++x)
+		{
+			auto start = y * xBlocks * chunkSize + x * chunkSize;
+
+			// concatenate all cells in block and normalise
+			for (auto yb = 0; yb < side; ++yb)
+			{
+				for (auto xb = 0; xb < side; ++xb)
+				{
+					auto s = start + yb * side * bins + xb * bins;
+					auto e = s + bins;
+
+					descriptor[s .. e]  = grid.cell(x, y);
+					descriptor[s .. e] /= l2Norm(descriptor[s .. e]);
+				}
+			}		
+		}
+	}
+
+	return descriptor;
+}
+
+/// Returns an array of edge orientation histograms
+HistGrid histGrid(V)(V view, HogOptions options)
+	if (isView!V && is8BitGreyscale!V)
+{
+	validate(view, options);
+	
 	auto orientations = options.orientations;
 	auto gridW 		  = view.w / options.cellSide;
 	auto gridH 	      = view.h / options.cellSide;
@@ -46,70 +89,80 @@ double[] hog(V)(V view, HogOptions options)
 	auto hSob  		  = horizontalSobel(view);
 	auto vSob  		  = verticalSobel(view);
 
-	// Compute cell histograms
 	for (auto y = 0; y < view.h; ++y)
 	{
 		for (auto x = 0; x < view.w; ++x)
 		{
-			auto hVal = hSob[x, y];
-			auto vVal = vSob[x, y];
-
-			double mag = sqrt(hVal^^2 + vVal ^^2);
-			double dir = atan2(vVal, xVal);
-
+			auto hVal = cast(double)(hSob[x, y].l);
+			auto vVal = cast(double)(vSob[x, y].l);
+		
+			double mag = sqrt(hVal^^2 + vVal^^2);
+			double dir = atan2(vVal, hVal);
+			
 			auto oInter = interpolateGradient(dir, orientations, options.signed);
 			auto hInter = interpolate!false(x, options.cellSide);
 			auto vInter = interpolate!false(y, options.cellSide);
 
-			foreach (yBin; 0 .. 2)
-				foreach (xBin; 0 .. 2)
-					foreach (oBin; 0 .. 2)
+			foreach (yBin; TypeTuple!(0, 1))
+				foreach (xBin; TypeTuple!(0, 1))
+					foreach (oBin; TypeTuple!(0, 1))
+				{
+					auto yc = vInter[yBin];
+					auto xc = hInter[xBin];
+					auto oc = oInter[oBin];
+					
+					if (within(view, xc, yc, oc))
 					{
-						auto yc = yInter[yBin];
-						auto xc = xInter[xBin];
-						auto oc = oInter[oBin];
-
-						if (within(view, xc, yc, oc))
-						{
-							auto w = yInter[yBin + 2] 
-								   * hInter[xBin + 2] 
-								   * oInter[oBin + 2];
-
-							grid[xc, yc, oc] += w * mag;
-						}
+						auto w = vInter[yBin + 2] 
+						* hInter[xBin + 2] 
+						* oInter[oBin + 2];
+						
+						grid[xc, yc, oc] += w * mag;
 					}
+				}
 		}
 	}
 
-	// Accumulate into blocks
-	// TODO
+	return grid;
+}
+
+struct HistGrid
+{
+	this(int w, int h, int o)
+	{
+		w = w;
+		h = h;
+		o = o;
+		_data = new double[w * h * o];
+		_data[] = 0.0;
+	}
+
+	double[] cell(int x, int y)
+	{
+		auto start = cellStart(x, y);
+		return _data[start .. start + o];
+	}
+
+	double opIndex(int x, int y, int o)
+	{
+		return _data[cellStart(x, y) + o];
+	}
+
+	private int cellStart(int x, int y)
+	{
+		return w * o * y + o * x;
+	}
+
+	int w;
+	int h;
+	int o;
+
+	private double[] _data;
 }
 
 private bool within(V)(V view, int x, int y)
 {
 	return x >= 0 && x < view.w && y >= 0 && y < view.h;
-}
-
-private struct HistGrid
-{
-	this(int w, int h, int o)
-	{
-		_w = w;
-		_h = h;
-		_o = o;
-		_data = new double[w * h * o];
-		_data[] = 0.0;
-	}
-	
-	double opIndex(int x, int y, int o)
-	{
-		return _data[_w * _o * y + _o * x + o];
-	}
-	
-	private int _w;
-	private int _h;
-	private int _o;
-	private double[] _data;
 }
 
 // Left index, right index, left weight
@@ -169,16 +222,16 @@ unittest
 private void validate(V)(V view, HogOptions options)
 	if (isView!V)
 {
-	auto cellErr = "%s (%s) must be evenly divisible by cellSide (" ~ options.cellSide ~ ")";
+	auto cellErr = "%s (%s) must be evenly divisible by cellSide (" ~ options.cellSide.to!string ~ ")";
 
-	assert(view.w % cellSide == 0, format(cellErr, "w", view.w));
-	assert(view.h % cellSide == 0, format(cellErr, "h", view.h));
+	assert(view.w % options.cellSide == 0, format(cellErr, "w", view.w));
+	assert(view.h % options.cellSide == 0, format(cellErr, "h", view.h));
 
 	auto blockSide = options.blockSide;
 	auto stride = options.blockStride;
 	auto blockErr = 
-		"%s (%s) minus blockSide (" ~ options.blockSide ~ 
-		") must be evenly divisible by blockStride (" ~ options.blockStride ~ ")";
+		"%s (%s) minus blockSide (" ~ options.blockSide.to!string ~ 
+		") must be evenly divisible by blockStride (" ~ options.blockStride.to!string ~ ")";
 
 	assert((view.w - blockSide) % stride == 0, format(blockErr, "w", view.w));
 	assert((view.w - blockSide) % stride == 0, format(blockErr, "h", view.h));
