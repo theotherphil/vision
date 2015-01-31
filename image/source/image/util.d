@@ -10,8 +10,8 @@ enum is8BitGreyscale(V) = is (ViewColor!V == L8);
 
 static assert(is8BitGreyscale!(Image!L8));
 
-L8 toL8(int x)
-{ 
+L8 toL8(T)(T x)
+{
 	return L8(cast(ubyte)x); 
 }
 
