@@ -127,16 +127,6 @@ HistGrid histGrid(V)(V view, HogOptions options)
 	return grid;
 }
 
-/// theta is counter-clockwise rotation of line
-auto ray(int side, bool half, double theta)
-{
-	auto pad = cast(int)(0.05 * side);
-	auto mid = side / 2;
-	auto image = Image!L8(side, side);
-	line(image, mid, pad, mid, half ? mid : side - pad, L8(255));
-	return image.rotate(theta, L8(0), mid, mid);
-}
-
 struct HistGrid
 {
 	this(int w, int h, int o)
@@ -246,4 +236,65 @@ private void validate(V)(V view, HogOptions options)
 
 	assert((view.w - blockSide) % stride == 0, format(blockErr, "w", view.w));
 	assert((view.w - blockSide) % stride == 0, format(blockErr, "h", view.h));
+}
+
+auto star(int side, double[] hist, bool signed, double scale)
+{
+	import std.range;
+
+	auto numBins = cast(int)hist.length;
+	auto rays = 
+		iota(numBins)
+			.map!(i => ray(side, signed, dir(i, numBins, signed), (255.0*hist[i]/scale).toL8))
+			.array;
+
+	return sum(rays);
+}
+
+// TODO: 
+// Doesn't match how we interpolate gradients - there
+// a full vote to the first bin means the edge was
+// half-way between vertical and range * index / orientation,
+// but here we draw it vertically. Probably best to 
+// change the hog code as index 0 -> vertical seems most
+// intuitive
+private double dir(int index, int orientations, bool signed)
+{
+	return (signed ? 2 * PI : PI) * index / orientations;
+}
+
+/// theta is counter-clockwise rotation of line
+auto ray(int side, bool half, double theta, L8 color)
+{
+	auto pad = cast(int)(0.05 * side);
+	auto mid = side / 2;
+	auto img = Image!L8(side, side);
+	line(img, mid, pad, mid, half ? mid : side - pad, color);
+	return img.rotate(theta, L8(0), mid, mid);
+}
+
+auto sum(V)(V[] sources)
+	if (isView!V)
+{
+	foreach (src; sources)
+		assert(src.w == sources[0].w && src.h == sources[0].h,
+			"Mismatching layer size");
+	
+	static struct Sum
+	{
+		V[] sources;
+		
+		@property int w() { return sources[0].w; }
+		@property int h() { return sources[0].h; }
+		
+		ViewColor!V opIndex(int x, int y)
+		{
+			ViewColor!V c = sources[0][x, y];
+			foreach (ref src; sources[1..$])
+				c += src[x, y];
+			return c;
+		}
+	}
+	
+	return Sum(sources);
 }
