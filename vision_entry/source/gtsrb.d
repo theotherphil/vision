@@ -15,11 +15,15 @@ import ae.utils.graphics.draw;
 import ae.utils.graphics.color;
 
 import image.io;
+import image.features;
 
-/// Implementation of <that paper using random forests> for
-/// the GTSRB <url goes here>
+import ml.forest;
 
-// directory structure:
+// Implementation of "Traffic Sign Classification using K-d trees 
+// and Random Forests", Zaklouta et al, with test harness for
+// the GTSRB http://benchmark.ini.rub.de.
+
+// Local directory structure:
 // GTSRB
 //
 // 	Test
@@ -68,10 +72,15 @@ void score(SignTrainer trainer, int maxSamplesPerClass)
 
 		import std.stdio;
 
+		auto classSamples = 0;
 		foreach(f, r; records)
 		{
+			if (classSamples > maxSamplesPerClass)
+				continue;
+
+			++classSamples;
 			auto p = buildPath(dir, f);
-			writeln("Adding ", p);
+			writeln("\t\t", p);
 
 			try
 			{
@@ -84,7 +93,6 @@ void score(SignTrainer trainer, int maxSamplesPerClass)
 			}
 		}
 	}
-	writeln("Trained on ", numTrained, " images");
 
 	auto classifier = trainer.train();
 
@@ -101,6 +109,8 @@ void score(SignTrainer trainer, int maxSamplesPerClass)
 	foreach (f, r; records)
 	{
 		auto p = buildPath(testDir, f);
+		writeln("\t\t", p);
+
 		auto result = classifier.classify(readPBM(p), rect(r));
 
 		if (result == r.classId)
@@ -109,7 +119,10 @@ void score(SignTrainer trainer, int maxSamplesPerClass)
 			fail++;
 	}
 
-	writefln("Tested on %s images. Win: %s, fail: %s. Accuracy: %s", win + fail, win, fail, cast(double)win/fail);
+	auto total = win + fail;
+
+	writeln("Trained on ", numTrained, " images");
+	writefln("Tested on %s images. Win: %s, fail: %s. Accuracy: %s", total, win, fail, cast(double)win/total);
 	writeln("Failed to load:");
 	foreach (p; failPaths)
 		writeln(p);
@@ -122,10 +135,7 @@ private Rect rect(RoiRecord r)
 
 struct Rect
 {
-	int x0;
-	int y0;
-	int x1;
-	int y1;
+	int x0; int y0; int x1; int y1;
 }
 
 interface SignTrainer
@@ -133,6 +143,58 @@ interface SignTrainer
 	void add(Image!RGB sign, Rect box, int category);
 
 	SignClassifier train();
+}
+
+class ForestSignClassifier : SignClassifier
+{
+	this(DecisionForest forest, HogOptions options)
+	{
+		_forest = forest;
+		_options = options;
+	}
+
+	int classify(Image!RGB sign, Rect box)
+	{
+		auto feat = hogFeature(sign, _options);
+		return _forest.classify(feat)[0].to!int;
+	}
+
+	private DecisionForest _forest;
+	private HogOptions _options;
+}
+
+double[] hogFeature(Image!RGB sign, HogOptions options)
+{
+	return hog(sign.toGreyscale.nearestNeighbor(40, 40), options);
+}
+
+class ForestSignTrainer : SignTrainer
+{
+	this(DecisionTreeTrainer trainer, uint numTrees, HogOptions options)
+	{
+		_trainer = trainer;
+		_numTrees = numTrees;
+		_options = options;
+	}
+
+	void add(Image!RGB sign, Rect box, int category)
+	{
+		auto feat = hogFeature(sign, _options);
+		_features ~= feat;
+		_labels ~= category;
+	}
+
+	SignClassifier train()
+	{
+		auto forest = trainForest(DataView(_features, _labels), _trainer, _numTrees);
+		return new ForestSignClassifier(forest, _options);
+	}
+
+	private double[][] _features;
+	private uint[] _labels;
+	private uint _numTrees;
+	private HogOptions _options;
+	private DecisionTreeTrainer _trainer;
 }
 
 class ConstantSignTrainer : SignTrainer

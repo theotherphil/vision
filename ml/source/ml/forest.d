@@ -441,7 +441,11 @@ DecisionForest trainForest(DataView data, DecisionTreeTrainer trainer, uint numT
 	DecisionTree[] trees = new DecisionTree[numTrees];
 
 	for (int i = 0; i < numTrees; ++i)
+	{
+		import std.stdio;
+		writeln("Training tree ", i);
 		trees[i] = trainer.trainTree(data);
+	}
 
 	return new Forest(trees);
 }

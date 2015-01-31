@@ -20,6 +20,8 @@ import image.io;
 import image.util;
 import image.viewrange;
 
+import ml.forest;
+
 import gtsrb;
 
 string devDir = "/Users/philip/dev/";
@@ -38,7 +40,27 @@ void main()
 
 void runSigns()
 {
-	score(new ConstantSignTrainer(0), 10);
+	int maxSamplePerClass = int.max;
+	int candidatesPerNode = 100;
+	int depthLimit = 8;
+	int numTrees = 25;
+	uint numClasses = 43;
+
+	auto generator = new StumpGenerator(hogSize(40, 40, defaultHog), 0, 1);
+
+	auto params = TreeTrainingParams(
+		candidatesPerNode, generator, new EntropyMinimiser(numClasses), new DepthLimit(depthLimit));
+
+	auto treeTrainer = DecisionTreeTrainer(numClasses, params);
+	auto signTrainer = new ForestSignTrainer(treeTrainer, cast(uint)numTrees, defaultHog);
+
+	//score(signTrainer, maxSamplePerClass);
+	score(new ConstantSignTrainer(0), maxSamplePerClass);
+}
+
+HogOptions defaultHog()
+{
+	return HogOptions(8, true, 5, 2, 1);
 }
 
 void runHog()

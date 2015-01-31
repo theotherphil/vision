@@ -35,6 +35,23 @@ struct HogOptions
 	// normalisation - just use unit L2 norm for now
 }
 
+uint hogSize(int w, int h, HogOptions options)
+{
+	auto cellsWide = w / options.cellSide;
+	auto cellsHigh = h / options.cellSide;
+	auto blocksWide = (cellsWide + 1 - options.blockSide) / options.blockStride;
+	auto blocksHigh = (cellsHigh + 1 - options.blockSide) / options.blockStride;
+
+	return options.orientations * blocksHigh * blocksWide * options.blockSide^^2;
+}
+
+unittest
+{
+	assert(hogSize(40, 40, HogOptions(8, true, 5, 2, 1)) == 1568);
+	assert(hogSize(40, 40, HogOptions(9, true, 4, 2, 1)) == 2916);
+	assert(hogSize(40, 40, HogOptions(8, true, 4, 2, 1)) == 2592);
+}
+
 /// TODO: allow colour images - take the channel with maximum gradient
 /// TODO: at each pixel
 double[] hog(V)(V view, HogOptions options)
@@ -103,10 +120,6 @@ HistGrid histGrid(V)(V view, HogOptions options)
 			auto oInter = interpolateGradient(dir, orientations, options.signed);
 			auto hInter = interpolate!false(x, options.cellSide);
 			auto vInter = interpolate!false(y, options.cellSide);
-
-			import std.stdio;
-			writefln("hVal: %s, vVal: %s, mag: %s, dir: %s, inter: %s", 
-				hVal, vVal, mag, dir, oInter);
 
 			foreach (yBin; TypeTuple!(0, 1))
 				foreach (xBin; TypeTuple!(0, 1))
