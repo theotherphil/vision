@@ -106,6 +106,7 @@ HistGrid histGrid(V)(V view, HogOptions options)
 	auto grid  		  = HistGrid(gridW, gridH, orientations);
 	auto hSob  		  = horizontalSobel(view);
 	auto vSob  		  = verticalSobel(view);
+	auto cellArea     = options.cellSide * options.cellSide;
 
 	for (auto y = 0; y < view.h; ++y)
 	{
@@ -132,10 +133,10 @@ HistGrid histGrid(V)(V view, HogOptions options)
 					if (within(grid, xc, yc))
 					{
 						auto w = vInter[yBin + 2] 
-						* hInter[xBin + 2] 
-						* oInter[oBin + 2];
+							   * hInter[xBin + 2] 
+							   * oInter[oBin + 2];
 						
-						grid[xc, yc, oc] += w * mag;
+						grid[xc, yc, oc] += w * mag / cellArea;
 					}
 				}
 		}
@@ -258,49 +259,43 @@ private void validate(V)(V view, HogOptions options)
 // Utils for visualising HOG features
 
 import std.range;
+import image.contrast;
 
-auto visualise(HistGrid grid, int side, bool signed, double scale)
+auto visualise(HistGrid grid, int side, bool signed)
 {
 	return iota(grid.h)
 			.map!(y => 
 				iota(grid.w)
-					.map!(x => star(side, grid.cell(x, y), signed, scale))
+					.map!(x => star(side, grid.cell(x, y), signed))
 					.hjoin)
-			.vjoin;
+			.vjoin
+			.stretchContrast(0, 100);
 }
 
-auto star(int side, double[] hist, bool signed, double scale)
+auto star(int side, double[] hist, bool signed)
 {
 	auto numBins = cast(int)hist.length;
 	auto rays = 
 		iota(numBins)
-			.map!(i => ray(side, signed, dir(i, numBins, signed), (255.0*hist[i]/scale).toL8))
+			.map!(i => ray(side, signed, dir(i, numBins, signed), (hist[i]).toL8))
 			.array;
 
 	return sum(rays);
 }
 
-// TODO: 
-// Doesn't match how we interpolate gradients - there
-// a full vote to the first bin means the edge was
-// half-way between vertical and range * index / orientation,
-// but here we draw it vertically. Probably best to 
-// change the hog code as index 0 -> vertical seems most
-// intuitive
 private double dir(int index, int orientations, bool signed)
 {
 	double range = signed ? 2 * PI : PI;
-	return range * index / orientations;
+	return range * (index + 0.5) / orientations;
 }
 
-/// theta is counter-clockwise rotation of line
 auto ray(int side, bool half, double theta, L8 color)
 {
 	auto pad = cast(int)(0.05 * side);
 	auto mid = side / 2;
 	auto img = Image!L8(side, side);
 	line(img, mid, pad, mid, half ? mid : side - pad, color);
-	return img.rotate(theta, L8(0), mid, mid);
+	return img.rotate(-theta, L8(0), mid, mid);
 }
 
 auto sum(V)(V[] sources)

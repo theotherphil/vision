@@ -75,8 +75,8 @@ auto stretchContrast(V)(V view, int minPercentile, int maxPercentile)
 
 	int[256] hist = cumulativeHistogram(view);
 
-	auto lowValue  = 255;
-	auto highValue = 255;
+	auto lowValue  = 0;
+	auto highValue = 0;
 
 	double count = hist[$ - 1];
 	for (int i = 0; i < 256; ++i)
@@ -111,8 +111,7 @@ unittest
 	assert(stretch(L8(13), 10, 100) == L8(8));
 }
 
-/// Linearly stretch all pixel intensities to fit the 
-/// given range of intensities (not percentiles)
+/// Linearly stretch the given range to [0, 255]
 auto stretch(V)(V view, int low, int high)
 	if (isWritableView!V && is8BitGreyscale!V)
 {
