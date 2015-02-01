@@ -101,13 +101,13 @@ unittest
 	assert(split[1] == DataView([[0.0], [-1.0]], [1,3]));
 }
 
-Tuple!(BinaryClassifier, Split) minimise(alias fun, CR)(CR classifiers, DataView data)
-	if (isInputRange!CR && is (ElementType!CR == BinaryClassifier))
-	// Require f :: DataView -> DataView -> DataView -> double
+// TODO: require f :: DataView -> DataView -> DataView -> double
+Tuple!(ElementType!R, Split) minimise(alias fun, R)(R classifiers, DataView data)
+	if (isInputRange!R && is (ElementType!R == BinaryClassifier))
 {
 	assert(!classifiers.empty, "Cannot choose from empty set of candidates");
 	
-	BinaryClassifier bestClassifier = null;
+	ElementType!R bestClassifier = null;
 	auto bestSplit = Split(DataView.init, DataView.init, double.infinity);
 
 	foreach (c; classifiers)
