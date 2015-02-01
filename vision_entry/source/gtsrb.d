@@ -53,7 +53,7 @@ string[] dirs(string rootDir)
 	return dirEntries(rootDir, SpanMode.shallow).filter!(x => isDir(x)).map!(x => x.name).array;
 }
 
-string rootDir = "/Users/philip/dev/data/GTSRB";
+static string rootDir = "/Users/philip/dev/data/GTSRB";
 
 void score(SignTrainer trainer, int maxSamplesPerClass)
 {

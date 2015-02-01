@@ -24,8 +24,7 @@ import ml.forest;
 
 import gtsrb;
 
-string devDir = "/Users/philip/dev/";
-string outDir = "/Users/philip/dev/temp/";
+static string outDir = "/Users/philip/dev/temp/";
 
 string temp(string file)
 {
@@ -33,8 +32,9 @@ string temp(string file)
 }
 
 void main()
-{
-	auto dur = benchmark!runSigns(1);
+{	
+	writefln("Entered main");
+	auto dur = benchmark!runHog(1);
 	writeln("Time taken: ", to!Duration(dur[0]));
 }
 
@@ -61,7 +61,7 @@ void runSigns()
 HogOptions defaultHog()
 {
 	return HogOptions(8, true, 5, 2, 1);
-}
+} 
 
 void runHog()
 {
@@ -72,6 +72,6 @@ void runHog()
 	
 	auto opts = HogOptions(8, true, 10, 2, 1);
 	
-	histGrid(image, opts).visualise(20, true, 350.0).writePNG(temp("hog"));
+	histGrid(image, opts).visualise(20, true).writePNG(temp("hog"));
 	//star(150, [1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0], true, 1.0).writePNG(temp("star"));
 }

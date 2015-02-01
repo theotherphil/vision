@@ -7,7 +7,7 @@
 	"dependencies": {
 		"ae-graphics": ">=0.0.3",
 		"unit-threaded": ">=0.4.3",
-		"imageformats": ">=3.0.3",
+		"imageformats": ">=3.0.4",
 		"ml": "~master",
 		"image": "~master"
 	}
