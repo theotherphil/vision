@@ -39,10 +39,15 @@ uint hogSize(int w, int h, HogOptions options)
 {
 	auto cellsWide = w / options.cellSide;
 	auto cellsHigh = h / options.cellSide;
-	auto blocksWide = (cellsWide + 1 - options.blockSide) / options.blockStride;
-	auto blocksHigh = (cellsHigh + 1 - options.blockSide) / options.blockStride;
+	auto blocksWide = numBlocks(cellsWide, options.blockSide, options.blockStride);
+	auto blocksHigh = numBlocks(cellsHigh, options.blockSide, options.blockStride);
 
 	return options.orientations * blocksHigh * blocksWide * options.blockSide^^2;
+}
+
+private int numBlocks(int numCells, int blockSide, int blockStride)
+{
+	return (numCells + 1 - blockSide) / blockStride;
 }
 
 unittest
@@ -52,6 +57,8 @@ unittest
 	assert(hogSize(40, 40, HogOptions(8, true, 4, 2, 1)) == 2592);
 }
 
+// TODO: general purposes multi-dimensional indexer. Replace crap in HistGrid and hog
+
 /// TODO: allow colour images - take the channel with maximum gradient
 /// TODO: at each pixel
 double[] hog(V)(V view, HogOptions options)
@@ -60,29 +67,29 @@ double[] hog(V)(V view, HogOptions options)
 	validate(view, options);
 
 	auto grid = histGrid(view, options);
-	auto side = options.blockSide;
-	auto step = options.blockStride;
-	auto bins = options.orientations;
+	auto blockSide = options.blockSide;
+	auto blockStride = options.blockStride;
+	auto orientations = options.orientations;
 
-	auto xBlocks = (grid.w - side) / step;
-	auto yBlocks = (grid.h - side) / step;
-	auto chunkSize = bins * side ^^ 2;
+	auto xBlocks = numBlocks(grid.w, blockSide, blockStride);
+	auto yBlocks = numBlocks(grid.h, blockSide, blockStride);
+	auto blockFeatureSize = orientations * blockSide ^^ 2;
 
-	double[] descriptor = new double[xBlocks * yBlocks * chunkSize];
+	double[] descriptor = new double[xBlocks * yBlocks * blockFeatureSize];
 
-	for (auto y = 0; y + side <= grid.h; ++y)
+	for (auto y = 0; y + blockSide <= grid.h; y += blockStride)
 	{
-		for (auto x = 0; x + side <= grid.w; ++x)
+		for (auto x = 0; x + blockSide <= grid.w; x += blockStride)
 		{
-			auto start = y * xBlocks * chunkSize + x * chunkSize;
+			auto blockStart = y * xBlocks * blockFeatureSize + x * blockFeatureSize;
 
 			// concatenate all cells in block and normalise
-			for (auto yb = 0; yb < side; ++yb)
+			for (auto yb = 0; yb < blockSide; ++yb)
 			{
-				for (auto xb = 0; xb < side; ++xb)
+				for (auto xb = 0; xb < blockSide; ++xb)
 				{
-					auto s = start + yb * side * bins + xb * bins;
-					auto e = s + bins;
+					auto s = blockStart + yb * blockSide * orientations + xb * orientations;
+					auto e = s + orientations;
 
 					descriptor[s .. e]  = grid.cell(x, y);
 					descriptor[s .. e] /= l2Norm(descriptor[s .. e]);

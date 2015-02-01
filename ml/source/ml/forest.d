@@ -4,7 +4,6 @@ import std.algorithm;
 import std.math;
 import std.range;
 import std.random;
-import std.stdio;
 import std.typecons;
 import std.variant;
 
@@ -367,7 +366,7 @@ struct DecisionTreeTrainer
 
 unittest
 {
-	// Returns first classifier its given. Splits data in two regardless of input classifiers
+	// Returns first classifier it's given. Splits data in two regardless of input classifiers
 	class SelectFirst : ClassifierSelector
 	{
 		Tuple!(BinaryClassifier, Split) select(BinaryClassifier[] classifiers, DataView data)
@@ -456,11 +455,10 @@ DecisionForest trainForest(DataView data, DecisionTreeTrainer trainer, uint numT
 
 	for (int i = 0; i < numTrees; ++i)
 	{
-		import std.stdio;
-		writeln("Training tree ", i);
 		trees[i] = trainer.trainTree(data);
+		import std.stdio;
+		writeln("Trained tree ", i);
 	}
 
 	return new Forest(trees);
 }
-

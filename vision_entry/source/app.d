@@ -40,14 +40,15 @@ void main()
 
 void runSigns()
 {
-	int maxSamplePerClass = 10;
-	int maxTestImages = 100;
-	int candidatesPerNode = 1000;
+	int maxSamplePerClass = int.max;//10;
+	int maxTestImages = int.max;//100;
+	int candidatesPerNode = 100;
 	int depthLimit = 8;
-	int numTrees = 1;
+	int numTrees = 5;
 	uint numClasses = 43;
 
-	auto generator = new StumpGenerator(hogSize(40, 40, defaultHog), 0, 1).inputRangeObject;
+	// PHIL: auto-generate upper threshold from training data
+	auto generator = new StumpGenerator(hogSize(40, 40, defaultHog), 0, 0.2).inputRangeObject;
 
 	auto params = TreeTrainingParams(
 		candidatesPerNode, generator, new EntropyMinimiser(numClasses), new DepthLimit(depthLimit));
