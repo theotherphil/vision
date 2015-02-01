@@ -34,16 +34,17 @@ string temp(string file)
 void main()
 {	
 	writefln("Entered main");
-	auto dur = benchmark!runHog(1);
+	auto dur = benchmark!runSigns(1);
 	writeln("Time taken: ", to!Duration(dur[0]));
 }
 
 void runSigns()
 {
-	int maxSamplePerClass = int.max;
-	int candidatesPerNode = 100;
+	int maxSamplePerClass = 10;
+	int maxTestImages = 100;
+	int candidatesPerNode = 1000;
 	int depthLimit = 8;
-	int numTrees = 25;
+	int numTrees = 1;
 	uint numClasses = 43;
 
 	auto generator = new StumpGenerator(hogSize(40, 40, defaultHog), 0, 1);
@@ -54,8 +55,8 @@ void runSigns()
 	auto treeTrainer = DecisionTreeTrainer(numClasses, params);
 	auto signTrainer = new ForestSignTrainer(treeTrainer, cast(uint)numTrees, defaultHog);
 
-	//score(signTrainer, maxSamplePerClass);
-	score(new ConstantSignTrainer(0), maxSamplePerClass);
+	score(signTrainer, maxSamplePerClass, maxTestImages);
+	//score(new ConstantSignTrainer(0), maxSamplePerClass, maxTestImages);
 }
 
 HogOptions defaultHog()

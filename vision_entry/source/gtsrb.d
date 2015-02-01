@@ -4,6 +4,7 @@ import std.algorithm;
 import std.array;
 import std.conv;
 import std.csv;
+import std.datetime;
 import std.file;
 import std.path;
 import std.range;
@@ -55,33 +56,42 @@ string[] dirs(string rootDir)
 
 static string rootDir = "/Users/philip/dev/data/GTSRB";
 
-void score(SignTrainer trainer, int maxSamplesPerClass)
+void logTime(string name, TickDuration dur)
 {
-	// Train
+	writefln("Time taken by %s: %s", name, to!Duration(dur));
+}
+
+void logLoadFail(string path)
+{
+	writeln("Failed to load ", path);
+}
+
+SignClassifier train(SignTrainer trainer, int maxSamplesPerClass)
+{
+	auto timeTraining = measureTime!(d => logTime("training", d));
+
 	writeln("**** TRAINING ****");
 	auto trainDirs = dirs(buildPath(rootDir, "Training"));
 	auto numTrained = 0;
-	auto failPaths = new string[0];
+
 	foreach (dir; trainDirs)
 	{
 		writeln("Processing ", dir);
-
+		
 		auto cat = baseName(dir).to!int;
 		auto csv = format("GT-%s.csv", baseName(dir));
 		auto records = readRecords(buildPath(dir, csv));	
-
+		
 		import std.stdio;
 
 		auto classSamples = 0;
 		foreach(f, r; records)
 		{
-			if (classSamples > maxSamplesPerClass)
-				continue;
-
-			++classSamples;
+			if (++classSamples > maxSamplesPerClass)
+				break;
+				
 			auto p = buildPath(dir, f);
-			writeln("\t\t", p);
-
+			
 			try
 			{
 				trainer.add(readPBM(p), rect(r), r.classId);
@@ -89,43 +99,49 @@ void score(SignTrainer trainer, int maxSamplesPerClass)
 			}
 			catch(Exception ex)
 			{
-				failPaths ~= p;
+				logLoadFail(p);
 			}
 		}
 	}
 
-	auto classifier = trainer.train();
+	writeln("Trained on ", numTrained, " images");
+	return trainer.train();
+}
 
-	// Test
+void test(SignClassifier classifier, int maxTestImages)
+{
+	auto timeTesting = measureTime!(d => logTime("testing", d));
 	writeln("**** TESTING ****");
 	auto testDir = buildPath(rootDir, "Test");
 	auto testCsv = buildPath(testDir, "GT-final_test.csv");
-
+	
 	auto win = 0;
 	auto fail = 0;
-
+	
 	auto records = readRecords(testCsv);
 
+	auto count = 0;
 	foreach (f, r; records)
 	{
+		if (++count > maxTestImages)
+			break;
+
 		auto p = buildPath(testDir, f);
-		writeln("\t\t", p);
-
 		auto result = classifier.classify(readPBM(p), rect(r));
-
+		
 		if (result == r.classId)
 			win++;
 		else
 			fail++;
 	}
-
+	
 	auto total = win + fail;
-
-	writeln("Trained on ", numTrained, " images");
 	writefln("Tested on %s images. Win: %s, fail: %s. Accuracy: %s", total, win, fail, cast(double)win/total);
-	writeln("Failed to load:");
-	foreach (p; failPaths)
-		writeln(p);
+}
+
+void score(SignTrainer trainer, int maxSamplesPerClass, int maxTestImages)
+{
+	test(train(trainer, maxSamplesPerClass), maxTestImages);
 }
 
 private Rect rect(RoiRecord r)

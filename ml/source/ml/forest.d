@@ -97,21 +97,22 @@ unittest
 	assert(split[1] == DataView([[0.0], [-1.0]], [1,3]));
 }
 
-Tuple!(BinaryClassifier, Split) minimise(alias fun)(BinaryClassifier[] classifiers, DataView data)
-	// if f :: DataView -> DataView -> DataView -> double
+Tuple!(BinaryClassifier, Split) minimise(alias fun, CR)(CR classifiers, DataView data)
+	if (isInputRange!CR && is (ElementType!CR == BinaryClassifier))
+	// Require f :: DataView -> DataView -> DataView -> double
 {
-	assert(classifiers.length > 0, "Cannot choose from empty set of candidates");
+	assert(!classifiers.empty, "Cannot choose from empty set of candidates");
 	
 	BinaryClassifier bestClassifier = null;
 	auto bestSplit = Split(DataView.init, DataView.init, double.infinity);
 
-	for (auto i = 0; i < classifiers.length; ++i)
+	foreach (c; classifiers)
 	{
-		auto split = split(classifiers[i], data);
+		auto split = split(c, data);
 		auto score = fun(data, split[0], split[1]);
 		if (score < bestSplit.score)
 		{
-			bestClassifier = classifiers[i];
+			bestClassifier = c;
 			bestSplit = Split(split[0], split[1], score);
 		}
 	}
@@ -148,7 +149,7 @@ double weightedEntropyDrop(DataView node, DataView left, DataView right, uint nu
 
 interface ClassifierSelector
 {
-	Tuple!(BinaryClassifier, Split) select(BinaryClassifier[] classifiers, DataView data);
+	Tuple!(BinaryClassifier, Split) select(InputRange!BinaryClassifier classifiers, DataView data);
 }
 
 /// Chooses the classifier which maximises the reduction in weighted entropy,
@@ -162,7 +163,7 @@ class EntropyMinimiser : ClassifierSelector
 		_numClasses = numClasses;
 	}
 
-	Tuple!(BinaryClassifier, Split) select(BinaryClassifier[] classifiers, DataView data)
+	Tuple!(BinaryClassifier, Split) select(InputRange!BinaryClassifier classifiers, DataView data)
 	{
 		return minimise!((n, l, r) => -weightedEntropyDrop(n, l, r, _numClasses))(classifiers, data);
 	}
@@ -170,7 +171,7 @@ class EntropyMinimiser : ClassifierSelector
 
 interface ClassifierGenerator
 {
-	BinaryClassifier[] generate(int num);
+	InputRange!BinaryClassifier generate(int num);
 }
 
 /// Generates Stumps with the query dimension generated uniformly
@@ -185,12 +186,12 @@ class StumpGenerator : ClassifierGenerator
 		_generator = Random(seed);
 	}
 
-	BinaryClassifier[] generate(int num)
+	InputRange!BinaryClassifier generate(int num)
 	{
 		auto classifiers = new BinaryClassifier[num];
 		for (int i = 0; i < num; ++i)
 			classifiers[i] = new Stump(nextIndex(), nextThreshold());
-		return classifiers;
+		return classifiers.inputRangeObject;
 	}
 
 	private int nextIndex()
@@ -329,7 +330,7 @@ struct DecisionTreeTrainer
 	void growTree(TreeNode node, DataView data, uint currentDepth)
 	{
 		auto candidates = _params.generator.generate(_params.candidatesPerNode);
-		auto selection  = _params.selector.select(candidates, data);
+		auto selection  = _params.selector.select(candidates.inputRangeObject, data);
 		
 		auto classifier = selection[0];
 		auto split 		= selection[1];
