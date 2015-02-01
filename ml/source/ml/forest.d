@@ -35,12 +35,16 @@ struct Split
 	DataView left; DataView right; double score;
 }
 
+enum isBinaryClassifier(T) = 
+	is (typeof(T.classify((double[]).init)) == bool);
+
 interface BinaryClassifier
 {
 	bool classify(double[] sample);
 }
 
-Tuple!(DataView, DataView) split(BinaryClassifier classifier, DataView data)
+Tuple!(DataView, DataView) split(C)(C classifier, DataView data)
+	if (isBinaryClassifier!C)
 {
 	double[][] leftValues;  uint[] leftLabels;
 	double[][] rightValues; uint[] rightLabels;
@@ -169,45 +173,54 @@ class EntropyMinimiser : ClassifierSelector
 	}
 }
 
-interface ClassifierGenerator
-{
-	InputRange!BinaryClassifier generate(int num);
-}
-
 /// Generates Stumps with the query dimension generated uniformly
 /// in [0, numDims) and the threshold generated uniformly in [min, max) 
-class StumpGenerator : ClassifierGenerator
+struct StumpGenerator
 {
 	this(int numDims, double min, double max, int seed = 1)
 	{
 		_numDims = numDims;
 		_min = min;
 		_max = max;
-		_generator = Random(seed);
+		_rand = Random(seed);
+		_front = gen();
 	}
 
-	InputRange!BinaryClassifier generate(int num)
+	bool empty()
+	{ 
+		return false; 
+	}
+
+	void popFront()
+	{ 
+		_front = gen(); 
+	}
+
+	BinaryClassifier front()
 	{
-		auto classifiers = new BinaryClassifier[num];
-		for (int i = 0; i < num; ++i)
-			classifiers[i] = new Stump(nextIndex(), nextThreshold());
-		return classifiers.inputRangeObject;
+		return _front;
+	}
+
+	BinaryClassifier gen()
+	{
+		return new Stump(nextIndex, nextThreshold);
 	}
 
 	private int nextIndex()
 	{
-		return uniform(0, _numDims, _generator);
+		return uniform(0, _numDims, _rand);
 	}
 	
 	private double nextThreshold()
 	{
-		return uniform(_min, _max, _generator);
+		return uniform(_min, _max, _rand);
 	}
-	
+
 	private int _numDims;
 	private double _min;
 	private double _max;
-	private Random _generator;
+	private Random _rand;
+	private BinaryClassifier _front;
 }
 
 /// Probability distribution over class labels
@@ -304,7 +317,7 @@ class DepthLimit : StopRule
 struct TreeTrainingParams
 {
 	int candidatesPerNode;
-	ClassifierGenerator generator;
+	InputRange!BinaryClassifier generator;
 	ClassifierSelector selector;
 	StopRule stopRule;
 }
@@ -329,7 +342,7 @@ struct DecisionTreeTrainer
 
 	void growTree(TreeNode node, DataView data, uint currentDepth)
 	{
-		auto candidates = _params.generator.generate(_params.candidatesPerNode);
+		auto candidates = _params.generator.take(_params.candidatesPerNode);
 		auto selection  = _params.selector.select(candidates.inputRangeObject, data);
 		
 		auto classifier = selection[0];

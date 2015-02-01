@@ -47,7 +47,7 @@ void runSigns()
 	int numTrees = 1;
 	uint numClasses = 43;
 
-	auto generator = new StumpGenerator(hogSize(40, 40, defaultHog), 0, 1);
+	auto generator = new StumpGenerator(hogSize(40, 40, defaultHog), 0, 1).inputRangeObject;
 
 	auto params = TreeTrainingParams(
 		candidatesPerNode, generator, new EntropyMinimiser(numClasses), new DepthLimit(depthLimit));
