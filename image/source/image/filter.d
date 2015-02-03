@@ -58,6 +58,8 @@ auto horizontalFilter(V)(V view, double[] kernel, Padding padding = Padding.Cont
 				/// 
 				/// 	This requires support for floating point
 				/// 	channels in ae.graphics.color
+				/// 
+				/// 	See also scaleBilinear
 				foreach (i, f; pix.tupleof)
 					acc[i] += f * kernel[z];
 			}
