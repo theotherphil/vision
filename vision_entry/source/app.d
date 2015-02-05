@@ -58,7 +58,12 @@ void runSobel()
 	writeln(image[0, 7]);
 }
 
-// Benchmark 1.8s
+//Class based version:
+//Time taken by train forest: 803 ms, 610 μs, and 1 hnsec
+//Time taken by training: 1 sec, 755 ms, 625 μs, and 1 hnsec
+
+//Time taken by train forest: 767 ms, 123 μs, and 3 hnsecs
+//Time taken by training: 1 sec, 683 ms, 317 μs, and 2 hnsecs
 
 void runSigns()
 {
@@ -70,15 +75,22 @@ void runSigns()
 	uint numClasses = 43;
 
 	// PHIL: auto-generate upper threshold from training data
-	auto generator = new StumpGenerator(hogSize(40, 40, defaultHog), 0, 0.2).inputRangeObject;
+
+	alias C = Stump;
+	auto generator = StumpGenerator(hogSize(40, 40, defaultHog), 0, 0.2).inputRangeObject;
 
 	auto params = treeTrainingParams(
-		candidatesPerNode, generator, new EntropyMinimiser(numClasses), new DepthLimit(depthLimit));
+		candidatesPerNode, 
+		generator, 
+		new EntropyMinimiser!C(numClasses), 
+		new DepthLimit(depthLimit));
 
-	auto treeTrainer = TreeTrainer!BinaryClassifier(numClasses, params);
-	auto signTrainer = new ForestSignTrainer(treeTrainer, cast(uint)numTrees, defaultHog);
+	auto treeTrainer = TreeTrainer!C(numClasses, params);
+	auto signTrainer = new ForestSignTrainer!C(treeTrainer, cast(uint)numTrees, defaultHog);
 
 	score(signTrainer, maxSamplePerClass, maxTestImages);
+
+	writeln("Used ", C.stringof);
 
 	//score(new ConstantSignTrainer(0), maxSamplePerClass, maxTestImages);
 }

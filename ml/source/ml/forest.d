@@ -37,11 +37,6 @@ struct Split
 enum isBinaryClassifier(T) = 
 	is (typeof(T.classify((double[]).init)) == bool);
 
-interface BinaryClassifier
-{
-	bool classify(double[] sample);
-}
-
 Tuple!(DataView, DataView) split(C)(C classifier, DataView data)
 	if (isBinaryClassifier!C)
 {
@@ -70,7 +65,7 @@ Tuple!(DataView, DataView) split(C)(C classifier, DataView data)
 }
 
 /// Checks if descriptor[splitIndex] > threshold.
-class Stump : BinaryClassifier
+struct Stump
 {
 	size_t splitIndex; double threshold;
 
@@ -86,9 +81,11 @@ class Stump : BinaryClassifier
 	}
 }
 
+static assert(isBinaryClassifier!Stump);
+
 unittest
 {
-	auto stump = new Stump(0, 1.0);
+	auto stump = Stump(0, 1.0);
 	
 	assert(stump.classify([0.0, 5.0]) == false);
 	assert(stump.classify([5.0, 0.0]) == true);
@@ -102,11 +99,11 @@ unittest
 
 // TODO: require f :: DataView -> DataView -> DataView -> double
 Tuple!(ElementType!R, Split) minimise(alias fun, R)(R classifiers, DataView data)
-	if (isInputRange!R && is (ElementType!R : BinaryClassifier))
+	if (isInputRange!R && isBinaryClassifier!(ElementType!R))
 {
 	assert(!classifiers.empty, "Cannot choose from empty set of candidates");
-	
-	ElementType!R bestClassifier = null;
+
+	ElementType!R bestClassifier;
 	auto bestSplit = Split(DataView.init, DataView.init, double.infinity);
 
 	foreach (c; classifiers)
@@ -158,7 +155,7 @@ interface ClassifierSelector(C)
 
 /// Chooses the classifier which maximises the reduction in weighted entropy,
 /// i.e. which maximises H(data) - |R| * H(R) - |L| * H(L)
-class EntropyMinimiser : ClassifierSelector!BinaryClassifier
+class EntropyMinimiser(C) : ClassifierSelector!C
 {
 	uint _numClasses;
 
@@ -167,7 +164,7 @@ class EntropyMinimiser : ClassifierSelector!BinaryClassifier
 		_numClasses = numClasses;
 	}
 
-	Tuple!(BinaryClassifier, Split) select(InputRange!BinaryClassifier classifiers, DataView data)
+	Tuple!(C, Split) select(InputRange!C classifiers, DataView data)
 	{
 		return minimise!((n, l, r) => -weightedEntropyDrop(n, l, r, _numClasses))(classifiers, data);
 	}
@@ -196,14 +193,14 @@ struct StumpGenerator
 		_front = gen(); 
 	}
 
-	BinaryClassifier front()
+	Stump front()
 	{
 		return _front;
 	}
 
-	BinaryClassifier gen()
+	Stump gen()
 	{
-		return new Stump(nextIndex, nextThreshold);
+		return Stump(nextIndex, nextThreshold);
 	}
 
 	private int nextIndex()
@@ -220,7 +217,7 @@ struct StumpGenerator
 	private double _min;
 	private double _max;
 	private Random _rand;
-	private BinaryClassifier _front;
+	private Stump _front;
 }
 
 /// Probability distribution over class labels
@@ -338,7 +335,7 @@ auto treeTrainingParams(C)(
 struct TreeTrainer(C)
 {
 	uint _numClasses;
-	TreeTrainingParams!C _params;
+TreeTrainingParams!C _params;
 
 	this (uint numClasses, TreeTrainingParams!C params)
 	{

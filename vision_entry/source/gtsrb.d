@@ -68,7 +68,7 @@ void logLoadFail(string path)
 
 SignClassifier train(SignTrainer trainer, int maxSamplesPerClass)
 {
-	auto timeTraining = measureTime!(d => logTime("training", d));
+	auto t = measureTime!(d => logTime("training", d));
 
 	writeln("**** TRAINING ****");
 	auto trainDirs = dirs(buildPath(rootDir, "Training"));
@@ -105,6 +105,7 @@ SignClassifier train(SignTrainer trainer, int maxSamplesPerClass)
 	}
 
 	writeln("Trained on ", numTrained, " images");
+	auto u = measureTime!(d => logTime("train forest", d));
 	return trainer.train();
 }
 
@@ -184,9 +185,9 @@ double[] hogFeature(Image!RGB sign, HogOptions options)
 	return hog(sign.toGreyscale.nearestNeighbor(40, 40), options);
 }
 
-class ForestSignTrainer : SignTrainer
+class ForestSignTrainer(C) : SignTrainer
 {
-	this(TreeTrainer!BinaryClassifier trainer, uint numTrees, HogOptions options)
+	this(TreeTrainer!C trainer, uint numTrees, HogOptions options)
 	{
 		_trainer = trainer;
 		_numTrees = numTrees;
@@ -210,7 +211,7 @@ class ForestSignTrainer : SignTrainer
 	private uint[] _labels;
 	private uint _numTrees;
 	private HogOptions _options;
-	private TreeTrainer!BinaryClassifier _trainer;
+	private TreeTrainer!C _trainer;
 }
 
 class ConstantSignTrainer : SignTrainer
