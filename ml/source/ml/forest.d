@@ -102,7 +102,7 @@ unittest
 
 // TODO: require f :: DataView -> DataView -> DataView -> double
 Tuple!(ElementType!R, Split) minimise(alias fun, R)(R classifiers, DataView data)
-	if (isInputRange!R && is (ElementType!R == BinaryClassifier))
+	if (isInputRange!R && is (ElementType!R : BinaryClassifier))
 {
 	assert(!classifiers.empty, "Cannot choose from empty set of candidates");
 	
@@ -369,7 +369,7 @@ unittest
 	// Returns first classifier it's given. Splits data in two regardless of input classifiers
 	class SelectFirst : ClassifierSelector
 	{
-		Tuple!(BinaryClassifier, Split) select(BinaryClassifier[] classifiers, DataView data)
+		Tuple!(BinaryClassifier, Split) select(InputRange!BinaryClassifier classifiers, DataView data)
 		{
 			auto length = data.length;
 			auto score  = 1.0;
@@ -377,7 +377,7 @@ unittest
 			auto right  = DataView(data.values[length/2 .. $], data.labels[length/2 .. $]);
 			auto split  = Split(left, right, score);
 
-			return tuple(classifiers[0], split);
+			return tuple(classifiers.front, split);
 		}
 	}
 
@@ -386,18 +386,14 @@ unittest
 		bool classify(double[] sample) { return true; }
 	}
 
-	class Constant : ClassifierGenerator
+	struct Constant
 	{
-		BinaryClassifier[] generate(int num)
-		{
-			BinaryClassifier[] classifiers = new BinaryClassifier[num];
-			for (int i = 0; i < num; ++i)
-				classifiers[i] = new ReturnTrue;
-			return classifiers;
-		}
+		bool empty() { return false;}
+		void popFront() {}
+		BinaryClassifier front() { return new ReturnTrue; }
 	}
 
-	auto params  = TreeTrainingParams(1, new Constant, new SelectFirst, new DepthLimit(2));
+	auto params  = TreeTrainingParams(1, Constant().inputRangeObject, new SelectFirst, new DepthLimit(2));
 
 	auto trainer = DecisionTreeTrainer(4, params);
 	auto data    = DataView([[0.0], [1.0], [2.0], [3.0]], [0, 1, 2, 3]);
