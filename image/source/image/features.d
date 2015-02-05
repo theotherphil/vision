@@ -111,8 +111,8 @@ HistGrid histGrid(V)(V view, HogOptions options)
 	auto gridW 		  = view.w / options.cellSide;
 	auto gridH 	      = view.h / options.cellSide;
 	auto grid  		  = HistGrid(gridW, gridH, orientations);
-	auto hSob  		  = horizontalSobel(view);
-	auto vSob  		  = verticalSobel(view);
+	auto hSob  		  = hSobel(view);
+	auto vSob  		  = vSobel(view);
 	auto cellArea     = options.cellSide * options.cellSide;
 
 	for (auto y = 0; y < view.h; ++y)

@@ -15,7 +15,7 @@ enum Padding
 }
 
 ///	Returns: Horizontal correlations between input view and 1d kernel
-auto horizontalFilter(V)(V view, double[] kernel, Padding padding = Padding.Continuity)
+auto hFilter(V)(V view, double[] kernel, Padding padding = Padding.Continuity)
 	if (isView!V)
 {
 	alias Pix = ViewColor!V;
@@ -86,7 +86,7 @@ unittest
 
 	auto c = procedural!((x, y) => L8(cast(ubyte)(x * y + x)))(10, 10);
 	auto id = [0.0, 3.0, 0.0];
-	assert(c.horizontalFilter(id).pixelsEqual(c));
+	assert(c.hFilter(id).pixelsEqual(c));
 
 	auto d = 
 		[1, 4, 1,
@@ -100,22 +100,22 @@ unittest
 		 5, 5, 5,
 		 2, 2, 2].toL8(3, 3);
 
-	auto result = d.horizontalFilter(box);
-	assert(d.horizontalFilter(box).pixelsEqual(expected));
+	auto result = d.hFilter(box);
+	assert(d.hFilter(box).pixelsEqual(expected));
 }
 
 ///	Returns: Vertical correlations between input view and 1d kernel
-auto verticalFilter(V)(V view, double[] kernel, Padding padding = Padding.Continuity)
+auto vFilter(V)(V view, double[] kernel, Padding padding = Padding.Continuity)
 	if (isView!V)
 {
-	return view.flipXY.horizontalFilter(kernel, padding).flipXY;
+	return view.flipXY.hFilter(kernel, padding).flipXY;
 }
 
 ///	Returns: 2d correlation of view with the outer product of the 1d kernels hKernel and vKernel
 auto separableFilter(V)(V view, double[] hKernel, double[] vKernel, Padding padding = Padding.Continuity)
 	if (isView!V)
 {
-	return view.horizontalFilter(hKernel, padding).verticalFilter(vKernel, padding);
+	return view.hFilter(hKernel, padding).vFilter(vKernel, padding);
 }
 
 ///	Returns: 2d correlation of view with the outer product of kernel with itself 
@@ -131,7 +131,7 @@ static double[3] vSobelX = [1, 2, 1];  /// Horizontal filter to use for vertical
 static double[3] vSobelY = [-1, 0, 1]; /// Vertical filter to use for vertical Sobel
 
 /// TODO: for tiny filters do the 2d filter directly (at least for 3x3)
-auto horizontalSobel(V)(V view)
+auto hSobel(V)(V view)
 	if (isView!V && is (ViewColor!V == L8))
 {
 	auto sView = view.colorMap!(p => S16(p.l));
@@ -139,7 +139,7 @@ auto horizontalSobel(V)(V view)
 }
 
 /// ditto
-auto verticalSobel(V)(V view)
+auto vSobel(V)(V view)
 	if (isView!V && is (ViewColor!V == L8))
 {
 	auto sView = view.colorMap!(p => S16(p.l));
@@ -153,19 +153,19 @@ unittest
 	import image.viewrange;
 
 	auto flat = solid(L8(1), 3, 3);
-	assert(flat.horizontalSobel.source.all!(x => x == S16(0)));
-	assert(flat.verticalSobel.source.all!(x => x == S16(0)));
+	assert(flat.hSobel.source.all!(x => x == S16(0)));
+	assert(flat.vSobel.source.all!(x => x == S16(0)));
 
 	auto grad = procedural!((x, y) => (3*x).toL8)(4, 4);
-	auto mid = grad.horizontalSobel.crop(1, 1, 3, 3);
+	auto mid = grad.hSobel.crop(1, 1, 3, 3);
 	assert(mid.source.all!(x => x == S16(2)));
 }
 
 auto sobel(V)(V view)
 	if (isView!V  && is (ViewColor!V == L8))
 {
-	auto hSobel = horizontalSobel(view);
-	auto vSobel = verticalSobel(view);
+	auto hSobel = hSobel(view);
+	auto vSobel = vSobel(view);
 	
 	auto sobel = Image!L8(view.w, view.h);
 	

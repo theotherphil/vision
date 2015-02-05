@@ -47,7 +47,7 @@ auto scaleBilinear(V)(V view, int w, int h)
 
 			auto pix = ViewColor!V.init;
 
-			/// TODO: same issue as image.filter.horizontalFilter
+			/// TODO: same issue as image.filter.hFilter
 			foreach(i, ref p; pix.tupleof)
 			{
 				auto interTop = (1.0 - dx) * view[inCol, inRow].tupleof[i] + dx * view[nextCol, inRow].tupleof[i];
