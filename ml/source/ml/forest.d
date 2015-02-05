@@ -150,14 +150,15 @@ double weightedEntropyDrop(DataView node, DataView left, DataView right, uint nu
 	return entropy(node.labels, numClasses) - weightedLeft - weightedRight;
 }
 
-interface ClassifierSelector
+interface ClassifierSelector(C)
+	if (isBinaryClassifier!C)
 {
-	Tuple!(BinaryClassifier, Split) select(InputRange!BinaryClassifier classifiers, DataView data);
+	Tuple!(C, Split) select(InputRange!C classifiers, DataView data);
 }
 
 /// Chooses the classifier which maximises the reduction in weighted entropy,
 /// i.e. which maximises H(data) - |R| * H(R) - |L| * H(L)
-class EntropyMinimiser : ClassifierSelector
+class EntropyMinimiser : ClassifierSelector!BinaryClassifier
 {
 	uint _numClasses;
 
@@ -263,17 +264,22 @@ interface DecisionTree
 
 // Either (left, right) both non-null or both null.
 // Dist is null iff (left, right) non-null
-class TreeNode
+class TreeNode(C)
 {
-	BinaryClassifier classifier;
+	C classifier;
 	TreeNode left;
 	TreeNode right;
 	ClassDistribution dist;
 }
 
-class Tree : DecisionTree
+auto treeNode(C)(C c, TreeNode!C l, TreeNode!C r, ClassDistribution d)
 {
-	this(TreeNode root)
+	return new TreeNode!C(c, l, r, d);
+}
+
+class Tree(C) : DecisionTree
+{
+	this(TreeNode!C root)
 	{
 		this.root = root;
 	}
@@ -290,7 +296,7 @@ class Tree : DecisionTree
 		return current.dist;
 	}
 
-	TreeNode root;
+	TreeNode!C root;
 }
 
 interface StopRule
@@ -313,20 +319,28 @@ class DepthLimit : StopRule
 	private uint _limit;
 }
 
-struct TreeTrainingParams
+struct TreeTrainingParams(C)
 {
 	int candidatesPerNode;
-	InputRange!BinaryClassifier generator;
-	ClassifierSelector selector;
+	InputRange!C generator;
+	ClassifierSelector!C selector;
 	StopRule stopRule;
 }
 
-struct DecisionTreeTrainer
+auto treeTrainingParams(C)(
+	int candidatesPerNode, InputRange!C generator,
+	ClassifierSelector!C selector, StopRule stopRule)
+{
+	return TreeTrainingParams!C(
+		candidatesPerNode, generator, selector, stopRule);
+}
+
+struct TreeTrainer(C)
 {
 	uint _numClasses;
-	TreeTrainingParams _params;
+	TreeTrainingParams!C _params;
 
-	this (uint numClasses, TreeTrainingParams params)
+	this (uint numClasses, TreeTrainingParams!C params)
 	{
 		_numClasses = numClasses;
 		_params = params;
@@ -334,12 +348,12 @@ struct DecisionTreeTrainer
 
 	DecisionTree trainTree(DataView data)
 	{
-		auto root = new TreeNode();
+		auto root = new TreeNode!C();
 		growTree(root, data, 1);
-		return new Tree(root);
+		return new Tree!C(root);
 	}
 
-	void growTree(TreeNode node, DataView data, uint currentDepth)
+	void growTree(TreeNode!C node, DataView data, uint currentDepth)
 	{
 		auto candidates = _params.generator.take(_params.candidatesPerNode);
 		auto selection  = _params.selector.select(candidates.inputRangeObject, data);
@@ -355,10 +369,10 @@ struct DecisionTreeTrainer
 		{
 			node.classifier = classifier;
 
-			node.left = new TreeNode();
+			node.left = new TreeNode!C();
 			growTree(node.left, split.left, currentDepth + 1);
 
-			node.right = new TreeNode();
+			node.right = new TreeNode!C();
 			growTree(node.right, split.right, currentDepth + 1);
 		}
 	}
@@ -366,10 +380,17 @@ struct DecisionTreeTrainer
 
 unittest
 {
-	// Returns first classifier it's given. Splits data in two regardless of input classifiers
-	class SelectFirst : ClassifierSelector
+	struct ReturnTrue
 	{
-		Tuple!(BinaryClassifier, Split) select(InputRange!BinaryClassifier classifiers, DataView data)
+		bool classify(double[] sample) { return true; }
+	}
+	
+	static assert(isBinaryClassifier!ReturnTrue);
+
+	// Returns first classifier it's given. Splits data in two regardless of input classifiers
+	class SelectFirst : ClassifierSelector!ReturnTrue
+	{
+		Tuple!(ReturnTrue, Split) select(InputRange!ReturnTrue classifiers, DataView data)
 		{
 			auto length = data.length;
 			auto score  = 1.0;
@@ -381,21 +402,16 @@ unittest
 		}
 	}
 
-	class ReturnTrue : BinaryClassifier
-	{
-		bool classify(double[] sample) { return true; }
-	}
-
 	struct Constant
 	{
 		bool empty() { return false;}
 		void popFront() {}
-		BinaryClassifier front() { return new ReturnTrue; }
+		ReturnTrue front() { return ReturnTrue(); }
 	}
 
-	auto params  = TreeTrainingParams(1, Constant().inputRangeObject, new SelectFirst, new DepthLimit(2));
+	auto params  = TreeTrainingParams!ReturnTrue(1, Constant().inputRangeObject, new SelectFirst, new DepthLimit(2));
 
-	auto trainer = DecisionTreeTrainer(4, params);
+	auto trainer = TreeTrainer!ReturnTrue(4, params);
 	auto data    = DataView([[0.0], [1.0], [2.0], [3.0]], [0, 1, 2, 3]);
 
 	auto tree    = trainer.trainTree(data);
@@ -445,7 +461,7 @@ class Forest : DecisionForest
 	private uint _numClasses;
 }
 
-DecisionForest trainForest(DataView data, DecisionTreeTrainer trainer, uint numTrees)
+DecisionForest trainForest(C)(DataView data, TreeTrainer!C trainer, uint numTrees)
 {
 	DecisionTree[] trees = new DecisionTree[numTrees];
 

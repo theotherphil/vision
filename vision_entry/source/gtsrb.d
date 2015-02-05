@@ -186,7 +186,7 @@ double[] hogFeature(Image!RGB sign, HogOptions options)
 
 class ForestSignTrainer : SignTrainer
 {
-	this(DecisionTreeTrainer trainer, uint numTrees, HogOptions options)
+	this(TreeTrainer!BinaryClassifier trainer, uint numTrees, HogOptions options)
 	{
 		_trainer = trainer;
 		_numTrees = numTrees;
@@ -210,7 +210,7 @@ class ForestSignTrainer : SignTrainer
 	private uint[] _labels;
 	private uint _numTrees;
 	private HogOptions _options;
-	private DecisionTreeTrainer _trainer;
+	private TreeTrainer!BinaryClassifier _trainer;
 }
 
 class ConstantSignTrainer : SignTrainer

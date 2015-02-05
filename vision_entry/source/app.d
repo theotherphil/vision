@@ -32,16 +32,38 @@ string temp(string file)
 }
 
 void main()
-{	
+{
 	writefln("Entered main");
 	auto dur = benchmark!runSigns(1);
 	writeln("Time taken: ", to!Duration(dur[0]));
 }
 
+void runAndSave()
+{
+	auto name = "house.png";
+
+	auto img = readPNG(temp(name)).toGreyscale;
+	//auto img = readPNG(temp(name));
+
+	img.vSobel.writePNG(temp("result_" ~ name));
+}
+
+void runSobel()
+{
+	auto image = 
+		readPNG(outDir ~ "house.png")
+			.toGreyscale
+			.sobel;
+
+	writeln(image[0, 7]);
+}
+
+// Benchmark 1.8s
+
 void runSigns()
 {
-	int maxSamplePerClass = int.max;//10;
-	int maxTestImages = int.max;//100;
+	int maxSamplePerClass = 10;
+	int maxTestImages = 10;
 	int candidatesPerNode = 100;
 	int depthLimit = 8;
 	int numTrees = 5;
@@ -50,13 +72,14 @@ void runSigns()
 	// PHIL: auto-generate upper threshold from training data
 	auto generator = new StumpGenerator(hogSize(40, 40, defaultHog), 0, 0.2).inputRangeObject;
 
-	auto params = TreeTrainingParams(
+	auto params = treeTrainingParams(
 		candidatesPerNode, generator, new EntropyMinimiser(numClasses), new DepthLimit(depthLimit));
 
-	auto treeTrainer = DecisionTreeTrainer(numClasses, params);
+	auto treeTrainer = TreeTrainer!BinaryClassifier(numClasses, params);
 	auto signTrainer = new ForestSignTrainer(treeTrainer, cast(uint)numTrees, defaultHog);
 
 	score(signTrainer, maxSamplePerClass, maxTestImages);
+
 	//score(new ConstantSignTrainer(0), maxSamplePerClass, maxTestImages);
 }
 
@@ -71,9 +94,9 @@ void runHog()
 		readPNG(outDir ~ "house.png")
 			.toGreyscale
 			.crop(0, 0, 500, 350);
-	
+
 	auto opts = HogOptions(8, true, 10, 2, 1);
-	
+
 	histGrid(image, opts).visualise(20, true).writePNG(temp("hog"));
 	//star(150, [1.0, 2.0, 3.0, 4.0, 3.0, 2.0, 1.0], true, 1.0).writePNG(temp("star"));
 }
