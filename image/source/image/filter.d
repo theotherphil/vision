@@ -1,19 +1,14 @@
 module image.filter;
 
 import std.math;
+import std.range;
 
 import ae.utils.graphics.image;
 import ae.utils.graphics.color;
  
 import image.math;
-
-/// What to do when the kernel exceeds an image boundary.
-enum Padding
-{
-	Continuity, /// Treat the outermost pixel as repeating forever
-	Init 		/// Treat all pixels outside the image as having the
-				/// default value for their colour type
-}
+import image.util;
+import image.viewrange;
 
 ///	Returns: Horizontal correlations between input view and 1d kernel
 auto hFilter(V)(V view, double[] kernel, Padding padding = Padding.Continuity)
@@ -133,7 +128,7 @@ static double[3] vSobelY = [-1, 0, 1]; /// Vertical filter to use for vertical S
 
 /// TODO: for tiny filters do the 2d filter directly (at least for 3x3)
 auto hSobel(V)(V view)
-	if (isView!V && is (ViewColor!V == L8))
+	if (isView!V && is8BitGreyscale!V)
 {
 	auto sView = view.colorMap!(p => S16(p.l));
 	return sView.separableFilter(hSobelX, hSobelY);
@@ -141,7 +136,7 @@ auto hSobel(V)(V view)
 
 /// ditto
 auto vSobel(V)(V view)
-	if (isView!V && is (ViewColor!V == L8))
+	if (isView!V && is8BitGreyscale!V)
 {
 	auto sView = view.colorMap!(p => S16(p.l));
 	return sView.separableFilter(vSobelX, vSobelY);
@@ -163,7 +158,7 @@ unittest
 }
 
 auto sobel(V)(V view)
-	if (isView!V  && is (ViewColor!V == L8))
+	if (isView!V && is8BitGreyscale!V)
 {
 	auto hSobel = hSobel(view);
 	auto vSobel = vSobel(view);
@@ -183,6 +178,49 @@ auto sobel(V)(V view)
 	}
 	
 	return sobel;
+}
+
+/// integralImage[x, y] is the sum of view[u, v]
+/// where u <= x and v <= y
+Image!L16 integralImage(V)(V view)
+	if (isView!V && is8BitGreyscale!V)
+{
+	auto integral = Image!L16(view.w, view.h);
+	view.source.map!(x => L16(x.l)).copy(integral.sink);
+
+	for (auto x = 1; x < view.w; ++x)
+		integral[x, 0] += integral[x - 1, 0];
+	
+	for (auto y = 1; y < view.h; ++y)
+	{
+		integral[0, y] += integral[0, y - 1];
+		
+		for (auto x = 1; x < view.w; ++x)
+		{
+			integral[x, y] += integral[x, y - 1];
+			integral[x, y] += integral[x - 1, y];
+			integral[x, y] -= integral[x - 1, y - 1];
+		}
+	}
+	
+	return integral;
+}
+
+unittest
+{
+	auto img = 
+		[1, 2, 3,
+		 4, 5, 6,
+		 7, 8, 9].toL8(3, 3);
+
+	auto ii = img.integralImage;
+
+	auto expected =
+		[ 1,  3,  6,
+		  5,  12, 21,
+		  12, 27, 45].toL16(3, 3);
+
+	assert(ii.pixelsEqual(expected));
 }
 
 /// Fills the left margin entries in buffer with leftVal and the right margin entries with rightVal
