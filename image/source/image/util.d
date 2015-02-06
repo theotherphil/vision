@@ -32,6 +32,18 @@ auto toL8(int[] xs, int w, int h)
 	return img;
 }
 
+///	Copies view into a newly allocated image and updates that in place
+Image!(ViewColor!V) copyAndThen(alias fun, V, T...)(V view, T args)
+	if (isView!V)
+{
+	auto mut = ViewImage!V(view.w, view.h);
+	view.copy(mut);
+	fun(mut, args);
+	return mut;
+}
+
+// TODO: mixin to generate copying version from mutating version
+
 version(unittest)
 {
 	import std.math;

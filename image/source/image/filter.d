@@ -2,10 +2,11 @@ module image.filter;
 
 import std.math;
 
-import image.math;
 import ae.utils.graphics.image;
 import ae.utils.graphics.color;
  
+import image.math;
+
 /// What to do when the kernel exceeds an image boundary.
 enum Padding
 {

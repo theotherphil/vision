@@ -13,10 +13,12 @@ import ae.utils.graphics.color;
 import ae.utils.graphics.image;
 import ae.utils.graphics.draw;
 
+import image.affine;
 import image.contrast;
 import image.features;
 import image.filter;
 import image.io;
+import image.noise;
 import image.util;
 import image.viewrange;
 
@@ -34,7 +36,7 @@ string temp(string file)
 void main()
 {
 	writefln("Entered main");
-	auto dur = benchmark!runSigns(1);
+	auto dur = benchmark!runAndSave(1);
 	writeln("Time taken: ", to!Duration(dur[0]));
 }
 
@@ -42,10 +44,10 @@ void runAndSave()
 {
 	auto name = "house.png";
 
-	auto img = readPNG(temp(name)).toGreyscale;
-	//auto img = readPNG(temp(name));
+	//auto img = readPNG(temp(name)).toGreyscale;
+	auto img = readPNG(temp(name));
 
-	img.vSobel.writePNG(temp("result_" ~ name));
+	img.translate(10, 50).writePNG(temp("result_" ~ name));
 }
 
 void runSobel()

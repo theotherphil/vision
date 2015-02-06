@@ -11,16 +11,6 @@ import image.util;
 import image.math;
 import image.viewrange;
 
-///	Copies view into a newly allocated image and updates that in place
-Image!(ViewColor!V) copyAndThen(alias fun, V, T...)(V view, T args)
-	if (isView!V)
-{
-	auto mut = ViewImage!V(view.w, view.h);
-	view.copy(mut);
-	fun(mut, args);
-	return mut;
-}
-
 int[256] cumulativeHistogram(V)(V view)
 	if (isView!V && is (ViewColor!V == L8))
 {

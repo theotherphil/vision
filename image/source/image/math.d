@@ -74,7 +74,7 @@ Tuple!(double, double) boxMullerTransform(double u1, double u2)
 ///	Generates normally distributed pseudo-random numbers
 struct RandomNormal
 {
-	this(double mean, double stdev, int seed =1)
+	this(double mean, double stdev, int seed = 1)
 	{
 		_gen   = Random(seed);
 		_mean  = mean;

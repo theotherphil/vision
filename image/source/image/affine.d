@@ -1,7 +1,8 @@
-﻿module image.scale;
+﻿module image.affine;
 
 import std.algorithm;
 import ae.utils.graphics.image;
+
 import image.math;
 
 enum ScalingMethod
@@ -64,4 +65,24 @@ auto scaleBilinear(V)(V view, int w, int h)
 	}
 	
 	return scaled;
+}
+
+/// Translates the image by (tx, ty) (x increases rightwards, 
+/// y increases downwards, as usual)
+/// TODO: 
+/// 	Trying to call this results in:
+/// 
+/// 	ae-graphics-0.0.3/ae/utils/graphics/view.d(483): 
+/// 	Error: this.bg.opIndex(x, y) is not an lvalue
+auto translate(V)(V view, int tx, int ty)
+{
+	auto lPad = tx > 0 ? tx : 0;
+	auto rPad = tx > 0 ? 0 : -tx;
+	auto tPad = ty > 0 ? ty : 0;
+	auto bPad = ty > 0 ? 0 : -ty;
+
+	auto val = ViewColor!V.init;
+	return view
+		.border(lPad, rPad, tPad, bPad, val)
+		.crop(rPad, bPad, rPad + view.width, bPad + view.height);
 }

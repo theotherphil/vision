@@ -29,6 +29,8 @@ struct DataView
 	}
 }
 
+static assert(isDataSet!DataView);
+
 struct Split
 {
 	DataView left; DataView right; double score;
@@ -140,7 +142,8 @@ unittest
 }
 
 // H(data) - |right| * H(right) - |left| * H(left)
-double weightedEntropyDrop(DataView node, DataView left, DataView right, uint numClasses)
+double weightedEntropyDrop(D)(D node, D left, D right, uint numClasses)
+	if (isDataSet!D)
 {
 	auto weightedLeft = entropy(left.labels, numClasses) * left.length;
 	auto weightedRight = entropy(right.labels, numClasses) * right.length;
@@ -335,7 +338,7 @@ auto treeTrainingParams(C)(
 struct TreeTrainer(C)
 {
 	uint _numClasses;
-TreeTrainingParams!C _params;
+	TreeTrainingParams!C _params;
 
 	this (uint numClasses, TreeTrainingParams!C params)
 	{
