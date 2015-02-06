@@ -36,7 +36,7 @@ string temp(string file)
 void main()
 {
 	writefln("Entered main");
-	auto dur = benchmark!runAndSave(1);
+	auto dur = benchmark!runSigns(1);
 	writeln("Time taken: ", to!Duration(dur[0]));
 }
 
@@ -44,10 +44,10 @@ void runAndSave()
 {
 	auto name = "house.png";
 
-	//auto img = readPNG(temp(name)).toGreyscale;
-	auto img = readPNG(temp(name));
+	auto img = readPNG(temp(name)).toGreyscale;
+	//auto img = readPNG(temp(name));
 
-	img.translate(10, 50).writePNG(temp("result_" ~ name));
+	img.hSobel.writePNG(temp("result_" ~ name));
 }
 
 void runSobel()

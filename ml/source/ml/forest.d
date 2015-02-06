@@ -224,7 +224,7 @@ struct StumpGenerator
 }
 
 /// Probability distribution over class labels
-class ClassDistribution
+struct ClassDistribution
 {
 	double[] probabilities;
 
@@ -246,7 +246,7 @@ ClassDistribution distribution(L)(L labels, uint numClasses)
 	foreach (ref count; probabilities)
 		count /= labels.length;
 
-	return new ClassDistribution(probabilities);
+	return ClassDistribution(probabilities);
 }
 
 unittest
@@ -269,7 +269,7 @@ class TreeNode(C)
 	C classifier;
 	TreeNode left;
 	TreeNode right;
-	ClassDistribution dist;
+	Nullable!ClassDistribution dist;
 }
 
 auto treeNode(C)(C c, TreeNode!C l, TreeNode!C r, ClassDistribution d)
@@ -287,7 +287,7 @@ class Tree(C) : DecisionTree
 	ClassDistribution classify(double[] sample)
 	{
 		auto current = root;
-		while (current.dist is null)
+		while (current.dist.isNull)
 		{
 			current = current.classifier.classify(sample)
 				? current.left

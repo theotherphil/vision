@@ -74,15 +74,15 @@ auto scaleBilinear(V)(V view, int w, int h)
 /// 
 /// 	ae-graphics-0.0.3/ae/utils/graphics/view.d(483): 
 /// 	Error: this.bg.opIndex(x, y) is not an lvalue
-auto translate(V)(V view, int tx, int ty)
-{
-	auto lPad = tx > 0 ? tx : 0;
-	auto rPad = tx > 0 ? 0 : -tx;
-	auto tPad = ty > 0 ? ty : 0;
-	auto bPad = ty > 0 ? 0 : -ty;
-
-	auto val = ViewColor!V.init;
-	return view
-		.border(lPad, rPad, tPad, bPad, val)
-		.crop(rPad, bPad, rPad + view.width, bPad + view.height);
-}
+//auto translate(V)(V view, int tx, int ty)
+//{
+//	auto lPad = tx > 0 ? tx : 0;
+//	auto rPad = tx > 0 ? 0 : -tx;
+//	auto tPad = ty > 0 ? ty : 0;
+//	auto bPad = ty > 0 ? 0 : -ty;
+//
+//	auto val = ViewColor!V.init;
+//	return view
+//		.border(lPad, rPad, tPad, bPad, val)
+//		.crop(rPad, bPad, rPad + view.width, bPad + view.height);
+//}
