@@ -6,6 +6,8 @@ import std.range;
 import ae.utils.graphics.image;
 import ae.utils.graphics.color;
 
+import image.util;
+
 /// Hough patches as in 
 /// http://www.iai.uni-bonn.de/~gall/download/jgall_houghforest_pami11.pdf
 
@@ -17,16 +19,16 @@ import ae.utils.graphics.color;
 /// (e.g. as a subview of some image), but
 /// this is irrelevant for classification
 enum isFeature(F) =
-	is (typeof(F.init.channels) : uint) &&
-	is (typeof(F.init.length) : uint) &&
+	is (typeof(F.init.channels) : size_t) &&
+	is (typeof(F.init.length) : size_t) &&
 	is (typeof(F.init[0, 0]) : double);
 
 /// Feature backed by freshly allocated array
 /// Wildly inefficient
 struct ArrayFeature
 {
-	int channels;
-	int length;
+	size_t channels;
+	size_t length;
 
 	double opIndex(int c, int p)
 	{
@@ -47,67 +49,68 @@ private:
 
 static assert(isFeature!ArrayFeature);
 
-/// Feature that's a view into patches of
-/// some underlying images
-struct ViewFeature(V...)
+struct ViewFeature(V, int patchW = 16, int patchH = 16)
+	if (isView!V && is8BitGreyscale!V)
 {
-	@property int channels()
-	{
-		return _views.length;
-	}
+	enum length = patchW * patchH;
 
-	@property int length()
+	@property size_t channels()
 	{
-		return patchW * patchH;
+		return _patches.length;
 	}
 
 	double opIndex(int c, int p)
 	{
-		// this isn't the feature - this
-		// is the thing that generates the features,
-		// which are just proxies to the images
-		// hold by this struct
-
-		// need to index into relevant patch of
-		// underlying images
-		return 1.0;
+		return _patches[c].at(p).l;
 	}
 
-	int patchW;
-	int patchH;
-
-	// need to be able to get a view into 
-	// a patch of an image
-
-	this(V views, int patchW, int patchH)
+	this(V[] views, uint x, uint y)
 	{
-		this.patchW = patchW;
-		this.patchH = patchH;
+		assert(views.length > 0);
 
-		// TODO: 
-		//	all views the same size,
-		// 	all have elements convertible
-		//  to doubles, all views are single
-		//  channel. Problem: currently ae 
-		//  images can't have floating point
-		//	elements
+		auto w = views[0].w;
+		auto h = views[0].h;
 
-		_views = views;
+		for (auto i = 1; i < views.length; ++i)
+			assert(views[i].w == w && views[i].h == h);
+
+		auto x0 = x - patchW/2;
+		auto y0 = y - patchH/2;
+		auto x1 = x + patchW/2;
+		auto y1 = y + patchH/2;
+
+		assert(x0 >= 0 && x0 < w);
+		assert(y0 >= 0 && y0 < h);
+		assert(x1 > x0 && x1 <= w);
+		assert(y1 > y0 && y1 <= h);
+
+		// TODO: why do I need this cast?
+		_patches = cast(Patch[])views.map!(v => v.crop(x0, y0, x1,y1)).array;
 	}
 
-private:
+private 
 
-	V _views;
+	alias Patch = typeof(crop(V.init, 0, 0, 0, 0));
+	Patch[] _patches;
 }
 
 static assert(isFeature!(ViewFeature!(Image!L8)));
 
-// Given view and a pixel, construct channels and check whether point
-// p in channel C is >= q in channel D + r
+// Treat 2d view as 1d array
+private ViewColor!V at(V)(V view, uint p)
+	if (isView!V)
+{
+	auto y = p / view.w;
+	auto x = p - y * view.w;
+	return view[x, y];
+}
 
-// Feature version 1: intensity, hSobelAbs, vSobelAbs
-// Need to be able to take an image and a pixe, and get a
-// Feature/Patch/Whatever
+unittest
+{
+	auto img = [0, 2, 4, 6, 8, 10, 12, 14, 16].toL8(3, 3);
+	foreach(p; 0 ..9)
+		assert(img.at(p).l == 2 * p);
+}
 
 struct FeatureClassifier(F)
 	if (isFeature!F)

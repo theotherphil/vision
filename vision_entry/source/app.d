@@ -33,6 +33,8 @@ string temp(string file)
 	return buildPath(outDir, file);
 }
 
+// Hough feature version 1: intensity, hSobelAbs, vSobelAbs
+
 void main()
 {
 	writefln("Entered main");
@@ -59,13 +61,6 @@ void runSobel()
 
 	writeln(image[0, 7]);
 }
-
-//Class based version:
-//Time taken by train forest: 803 ms, 610 μs, and 1 hnsec
-//Time taken by training: 1 sec, 755 ms, 625 μs, and 1 hnsec
-
-//Time taken by train forest: 767 ms, 123 μs, and 3 hnsecs
-//Time taken by training: 1 sec, 683 ms, 317 μs, and 2 hnsecs
 
 void runSigns()
 {
