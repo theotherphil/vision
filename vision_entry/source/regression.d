@@ -98,7 +98,17 @@ void runTests()
 	Output[] outputs;
 	auto tester  = Tester(truthDir, outDir, testImage);
 
+	// empty contents of last run dir
+	foreach(file; dirEntries(outDir))
+		remove(file);
+
+	// PHIL: find the attributes
+
 	outputs ~= tester.run!(hSobel, true)();
+	outputs ~= tester.run!(vSobel, true)();
+	outputs ~= tester.run!(hSobelAbs, true)();
+	outputs ~= tester.run!(vSobelAbs, true)();
+	//outputs ~= tester.run!(sobel, true)();
 
 	auto summary = "";
 	foreach(o; outputs)

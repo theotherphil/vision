@@ -5,7 +5,8 @@ import std.range;
 
 import ae.utils.graphics.image;
 import ae.utils.graphics.color;
- 
+
+import image.attributes;
 import image.math;
 import image.util;
 import image.viewrange;
@@ -134,12 +135,29 @@ auto hSobel(V)(V view)
 	return sView.separableFilter(hSobelX, hSobelY);
 }
 
-/// ditto
+L8 clip(S16 p)
+{
+	auto v = clipTo!(ubyte)(abs(p.l));
+	return L8(v);
+}
+
+auto hSobelAbs(V)(V view)
+	if (isView!V && is8BitGreyscale!V)
+{
+	return hSobel(view).colorMap!(p => clip(p));
+}
+
 auto vSobel(V)(V view)
 	if (isView!V && is8BitGreyscale!V)
 {
 	auto sView = view.colorMap!(p => S16(p.l));
 	return sView.separableFilter(vSobelX, vSobelY);
+}
+
+auto vSobelAbs(V)(V view)
+	if (isView!V && is8BitGreyscale!V)
+{
+	return vSobel(view).colorMap!(p => clip(p));
 }
 
 unittest
@@ -157,6 +175,7 @@ unittest
 	assert(mid.source.all!(x => x == S16(2)));
 }
 
+@RegressionTested
 auto sobel(V)(V view)
 	if (isView!V && is8BitGreyscale!V)
 {
