@@ -405,7 +405,7 @@ unittest
 	struct Constant
 	{
 		bool empty() { return false;}
-		void popFront() {}
+		void popFront() { }
 		ReturnTrue front() { return ReturnTrue(); }
 	}
 
