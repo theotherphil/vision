@@ -23,3 +23,25 @@ enum isValueSet(D) = isFiniteRandomAccessRange!D;
 /// 
 enum isFiniteRandomAccessRange(R) = !isInfinite!R && isRandomAccessRange!R;
 
+/// DataSet implementation using dynamically allocated arrays
+struct DataView
+{
+	double[][] values;
+	uint[] labels;
+	
+	size_t length()
+	{
+		return values.length;
+	}
+	
+	this(double[][] values, uint[] labels)
+	{
+		assert(values.length == labels.length, 
+			"values and labels have different lengths");
+		
+		this.values = values;
+		this.labels = labels;
+	}
+}
+
+static assert(isDataSet!DataView);

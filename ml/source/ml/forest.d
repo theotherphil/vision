@@ -10,61 +10,8 @@ import std.variant;
 import ml.dataset;
 import ml.math;
 
-struct DataView
-{
-	double[][] values;
-	uint[] labels;
-
-	size_t length()
-	{
-		return values.length;
-	}
-
-	this(double[][] values, uint[] labels)
-	{
-		assert(values.length == labels.length, "values and labels have different lengths");
-
-		this.values = values;
-		this.labels = labels;
-	}
-}
-
-static assert(isDataSet!DataView);
-
-struct Split
-{
-	DataView left; DataView right; double score;
-}
-
 enum isBinaryClassifier(T) = 
 	is (typeof(T.classify((double[]).init)) == bool);
-
-Tuple!(DataView, DataView) split(C)(C classifier, DataView data)
-	if (isBinaryClassifier!C)
-{
-	double[][] leftValues;  uint[] leftLabels;
-	double[][] rightValues; uint[] rightLabels;
-
-	for (auto i = 0; i < data.values.length; ++i)
-	{
-		auto left = classifier.classify(data.values[i]);
-		if (left)
-		{
-			leftValues  ~= data.values[i];
-			leftLabels  ~= data.labels[i];
-		}
-		else
-		{
-			rightValues ~= data.values[i];
-			rightLabels ~= data.labels[i];
-		}
-	}
-
-	auto left  = DataView(leftValues,  leftLabels);
-	auto right = DataView(rightValues, rightLabels);
-
-	return tuple(left, right);
-}
 
 /// Checks if descriptor[splitIndex] > threshold.
 struct Stump
@@ -97,6 +44,38 @@ unittest
 
 	assert(split[0] == DataView([[2.0], [7.0]], [2, 4]));
 	assert(split[1] == DataView([[0.0], [-1.0]], [1,3]));
+}
+
+struct Split
+{
+	DataView left; DataView right; double score;
+}
+
+Tuple!(DataView, DataView) split(C)(C classifier, DataView data)
+	if (isBinaryClassifier!C)
+{
+	double[][] leftValues;  uint[] leftLabels;
+	double[][] rightValues; uint[] rightLabels;
+	
+	for (auto i = 0; i < data.values.length; ++i)
+	{
+		auto left = classifier.classify(data.values[i]);
+		if (left)
+		{
+			leftValues  ~= data.values[i];
+			leftLabels  ~= data.labels[i];
+		}
+		else
+		{
+			rightValues ~= data.values[i];
+			rightLabels ~= data.labels[i];
+		}
+	}
+	
+	auto left  = DataView(leftValues,  leftLabels);
+	auto right = DataView(rightValues, rightLabels);
+	
+	return tuple(left, right);
 }
 
 // TODO: require f :: DataView -> DataView -> DataView -> double

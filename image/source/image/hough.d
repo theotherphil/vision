@@ -2,9 +2,15 @@
 
 import std.random;
 import std.range;
+import std.typecons;
 
 import ae.utils.graphics.image;
 import ae.utils.graphics.color;
+
+// TODO: 
+//	Have base image library that doesn't depend on
+// 	ml, and a "vision" library that depends on ml and image
+import ml.forest;
 
 import image.util;
 
@@ -49,7 +55,7 @@ private:
 
 static assert(isFeature!ArrayFeature);
 
-struct ViewFeature(V, int patchW = 16, int patchH = 16)
+struct ViewPatch(V, int patchW = 16, int patchH = 16)
 	if (isView!V && is8BitGreyscale!V)
 {
 	enum length = patchW * patchH;
@@ -94,7 +100,7 @@ private
 	Patch[] _patches;
 }
 
-static assert(isFeature!(ViewFeature!(Image!L8)));
+static assert(isFeature!(ViewPatch!(Image!L8)));
 
 // Treat 2d view as 1d array
 private ViewColor!V at(V)(V view, uint p)
@@ -115,17 +121,17 @@ unittest
 struct FeatureClassifier(F)
 	if (isFeature!F)
 {
+	bool classify(F feature)
+	{
+		return feature[_c, _p] > feature[_c, _q] + _t;
+	}
+
 	this (int c, int p, int q, double t)
 	{
 		_c = c;
 		_p = p;
 		_q = q;
 		_t = t;
-	}
-
-	bool classify(F feature)
-	{
-		return feature[_c, _p] > feature[_c, _q] + _t;
 	}
 
 private:
@@ -185,3 +191,40 @@ private:
 }
 
 static assert(isInputRange!(FeatureClassifierRange!ArrayFeature));
+
+struct HoughPatch
+{
+	/// Image data as feature
+	ViewPatch patch;
+
+	/// Class this patch belongs to (or 0 for background)
+	uint label;
+
+	/// x displacement from centre of object
+	/// (ignored if label = 0)
+	double dx;
+
+	/// y displacement from centre of object
+	/// (ignored if label = 0)
+	double dy;
+}
+
+// Need position and category information along with patch.
+// features for forests are just arrays of doubles so we need
+// to be able to translate between features and double[].
+class HoughSelector(F) : ClassifierSelector!(FeatureClassifier!F)
+{
+	alias C = FeatureClassifier!F;
+
+	Tuple!(C, Split) select(InputRange!C classifier, DataView data)
+	{
+		// TODO: 
+		// alternate between using EntropyMinimiser on the labels,
+		// and minimising SSE for the distances
+
+		// TODO:
+		// need an adapter to view HoughPatch as double[]. This is
+		// horribly inefficient, so think about adding loads more
+		// type parameters to the forest stuff
+	}
+}

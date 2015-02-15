@@ -99,7 +99,7 @@ void runTests()
 	auto tester  = Tester(truthDir, outDir, testImage);
 
 	// empty contents of last run dir
-	foreach(file; dirEntries(outDir))
+	foreach(file; dirEntries(outDir, SpanMode.breadth))
 		remove(file);
 
 	// PHIL: find the attributes

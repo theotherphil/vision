@@ -5,6 +5,7 @@
 	"authors": ["philip"],
 	"dependencies": {
 		"ae-graphics": ">=0.0.3",
-		"imageformats": ">=3.0.3"
+		"imageformats": ">=3.0.3",
+		"ml": "~master"
 	}
 }
